@@ -433,7 +433,7 @@ function ConfiguracionContent() {
                   1. Abre Telegram y busca <strong>@Saas_ia_bot</strong><br />
                   2. Envía <strong>/start</strong> para obtener tu código<br />
                   3. Pega el código aquí (formato: TG-123456789)<br />
-                  4. Chatea por texto o voz — mismo asistente que en <strong>/ai</strong><br />
+                  4. Chatea por texto o voz — las acciones se ejecutan al instante<br />
                   5. Comandos: <strong>/chat</strong> /ventas /inventario /deudas /ayuda
                 </p>
 
