@@ -1,0 +1,56 @@
+{
+  "name": "Business OS — CRM Financiero",
+  "short_name": "BusinessOS",
+  "description": "CRM con IA para administrar ventas, inventario, clientes y finanzas. Misma cuenta en web y app.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#0a0a0a",
+  "theme_color": "#C8F542",
+  "orientation": "any",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Venta",
+      "short_name": "Venta",
+      "url": "/ventas",
+      "description": "Registrar una venta"
+    },
+    {
+      "name": "Asistente IA",
+      "short_name": "IA",
+      "url": "/ai",
+      "description": "Consultar al asistente"
+    },
+    {
+      "name": "Inventario",
+      "short_name": "Stock",
+      "url": "/inventario",
+      "description": "Ver inventario"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Inicio",
+      "url": "/dashboard",
+      "description": "Resumen del negocio"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"],
+  "prefer_related_applications": false
+}
