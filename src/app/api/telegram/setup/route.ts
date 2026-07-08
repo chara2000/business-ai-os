@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
 const BOT_COMMANDS = [
-  { command: 'start', description: 'Iniciar y vincular cuenta' },
+  { command: 'start', description: 'Obtener código de vinculación' },
+  { command: 'codigo', description: 'Ver tu código TG-xxx otra vez' },
   { command: 'ayuda', description: 'Ver comandos disponibles' },
   { command: 'chat', description: 'Modo conversación con IA' },
   { command: 'ventas', description: 'Resumen de ventas del día' },

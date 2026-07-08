@@ -430,12 +430,28 @@ function ConfiguracionContent() {
                 </div>
 
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-                  1. Abre Telegram y busca <strong>@Saas_ia_bot</strong><br />
-                  2. Envía <strong>/start</strong> para obtener tu código<br />
-                  3. Pega el código aquí (formato: TG-123456789)<br />
-                  4. Chatea por texto o voz — las acciones se ejecutan al instante<br />
-                  5. Comandos: <strong>/chat</strong> /ventas /inventario /deudas /ayuda
+                  1. Pulsa <strong>Abrir Telegram</strong> y envía <strong>/start</strong> (o <strong>/codigo</strong>)<br />
+                  2. El bot te enviará tu código <strong>TG-123456789</strong> en el chat<br />
+                  3. Cópialo y pégalo abajo → <strong>Vincular</strong>
                 </p>
+
+                {!telegramLinked && (
+                  <a
+                    href={`https://t.me/${botStatus?.username ?? 'Saas_ia_bot'}?start=vincular`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 16,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Send size={16} /> Abrir Telegram y obtener código
+                  </a>
+                )}
 
                 {!telegramLinked ? (
                   <div style={{ display: 'flex', gap: 12 }}>

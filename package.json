@@ -7,7 +7,10 @@
     "dev:mobile": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:smoke": "node scripts/smoke-test.mjs",
+    "test:smoke:local": "node scripts/smoke-test.mjs --url http://localhost:3000",
+    "test:smoke:prod": "node scripts/smoke-test.mjs --url https://business-ai-os.vercel.app"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

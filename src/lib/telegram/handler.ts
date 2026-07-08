@@ -8,44 +8,13 @@ import {
   saveTelegramSession,
   appendToHistory,
 } from '@/lib/telegram/session';
-
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-
-export async function sendTelegramMessage(chatId: number, text: string) {
-  const chunks = splitTelegramMessage(text);
-  for (const chunk of chunks) {
-    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: chunk,
-        parse_mode: 'Markdown',
-      }),
-    });
-    if (!res.ok) {
-      await fetch(`${TELEGRAM_API}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: chunk }),
-      });
-    }
-  }
-}
-
-function splitTelegramMessage(text: string, max = 4000): string[] {
-  if (text.length <= max) return [text];
-  const parts: string[] = [];
-  let rest = text;
-  while (rest.length > max) {
-    let idx = rest.lastIndexOf('\n', max);
-    if (idx < max * 0.5) idx = max;
-    parts.push(rest.slice(0, idx));
-    rest = rest.slice(idx);
-  }
-  if (rest) parts.push(rest);
-  return parts;
-}
+import {
+  normalizeTelegramCommand,
+  sendTelegramMessage,
+  sendTelegramPlain,
+  sendTelegramLinkCode,
+  buildTelegramLinkCode,
+} from '@/lib/telegram/messages';
 
 async function getUsuarioByChatId(chatId: number) {
   const supabase = await createAdminClient();
@@ -120,19 +89,27 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
 
   if (!userText) return;
 
-  if (userText === '/start') {
-    await sendTelegramMessage(chatId, `👋 ¡Hola ${firstName}!\n\nSoy tu *Business Assistant* 🤖\n\nPara conectarme a tu empresa:\n1. Ve a *Configuración → Asistente IA* en Business OS\n2. Envía /start aquí y copia tu código\n3. Pégalo en el panel (formato \`TG-${chatId}\`)\n\n💬 Luego podrás *chatear* igual que en la web:\n• Texto o mensajes de voz 🎤\n• /ventas /inventario /deudas\n• Preguntas libres con Gemini`);
+  const command = normalizeTelegramCommand(userText);
+
+  if (command === '/start') {
+    await sendTelegramLinkCode(chatId, firstName);
     return;
   }
 
-  if (userText === '/ayuda' || userText === '/help') {
+  if (command === '/codigo' || command === '/code') {
+    await sendTelegramPlain(chatId, buildTelegramLinkCode(chatId, firstName));
+    await sendTelegramPlain(chatId, `TG-${chatId}`);
+    return;
+  }
+
+  if (command === '/ayuda' || command === '/help') {
     await sendTelegramMessage(chatId, `📋 *Comandos:*\n\n/start — Vincular cuenta\n/ayuda — Esta ayuda\n/ventas — Ventas de hoy\n/inventario — Stock bajo\n/deudas — Cartera pendiente\n/chat — Modo conversación IA\n\n💬 También puedes *escribir o hablar* como en la web:\n_"¿Cuánto vendí hoy?"_\n_"¿Quién me debe?"_\n_"Agrega 10 tornillos"_`);
     return;
   }
 
   const usuarioData = await getUsuarioByChatId(chatId);
   if (!usuarioData) {
-    await sendTelegramMessage(chatId, `⚠️ Cuenta no vinculada.\n\nConfiguración → Asistente IA → código:\n\`TG-${chatId}\``);
+    await sendTelegramPlain(chatId, `⚠️ Cuenta no vinculada.\n\nTu código es:\nTG-${chatId}\n\nPégalo en Configuración → Asistente IA`);
     return;
   }
 
@@ -141,13 +118,13 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
   const usuarioId = usuarioData.id;
   let session = await getTelegramSession(supabase, usuarioId);
 
-  if (userText === '/ventas') {
+  if (command === '/ventas') {
     const { count, total } = await getVentasHoy(empresaId);
     await sendTelegramMessage(chatId, `💰 *Ventas de Hoy*\n\n📊 Transacciones: ${count}\n💵 Total: $${total.toLocaleString('es-CO')}`);
     return;
   }
 
-  if (userText === '/inventario') {
+  if (command === '/inventario') {
     const bajo = await getStockBajo(empresaId);
     if (bajo.length === 0) {
       await sendTelegramMessage(chatId, '✅ *Inventario OK*\n\nNo hay productos con stock bajo.');
@@ -158,7 +135,7 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
     return;
   }
 
-  if (userText === '/deudas') {
+  if (command === '/deudas') {
     const deudas = await getDeudas(empresaId);
     if (deudas.length === 0) {
       await sendTelegramMessage(chatId, '✅ *Sin deudas pendientes*');
@@ -173,7 +150,7 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
     return;
   }
 
-  if (userText === '/chat') {
+  if (command === '/chat') {
     await sendTelegramMessage(chatId, '💬 *Modo chat activo*\n\nPregúntame lo que quieras sobre tu negocio. Recuerdo las últimas conversaciones.\n\nEjemplos:\n• ¿Cuántos clientes tengo?\n• Productos con stock bajo\n• ¿Cuánto vendí hoy?');
     return;
   }
