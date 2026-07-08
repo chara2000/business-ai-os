@@ -1,19 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import {
-  processBusinessChat,
-} from '@/lib/ai/chat-engine';
 import { transcribeAudioBuffer, downloadTelegramFile } from '@/lib/ai/ask';
+import { runActionEngine } from '@/lib/ai/engine/pipeline';
+import { formatConfirmationText } from '@/lib/ai/engine/confirmation-builder';
 import {
-  getTelegramSession,
-  saveTelegramSession,
-  appendToHistory,
-} from '@/lib/telegram/session';
-import {
-  normalizeTelegramCommand,
   sendTelegramMessage,
   sendTelegramPlain,
   sendTelegramLinkCode,
   buildTelegramLinkCode,
+  normalizeTelegramCommand,
 } from '@/lib/telegram/messages';
 
 async function getUsuarioByChatId(chatId: number) {
@@ -116,7 +110,6 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
   const supabase = await createAdminClient();
   const empresaId = usuarioData.empresa_id;
   const usuarioId = usuarioData.id;
-  let session = await getTelegramSession(supabase, usuarioId);
 
   if (command === '/ventas') {
     const { count, total } = await getVentasHoy(empresaId);
@@ -155,21 +148,29 @@ export async function handleTelegramUpdate(body: Record<string, unknown>) {
     return;
   }
 
-  await sendTelegramMessage(chatId, '🤔 Procesando...');
+  await sendTelegramPlain(chatId, '🤔 Procesando...');
 
-  const result = await processBusinessChat({
+  const { data: usuarioRow } = await supabase
+    .from('usuarios')
+    .select('permisos, rol')
+    .eq('id', usuarioId)
+    .single();
+
+  const permisos = Array.isArray(usuarioRow?.permisos) ? usuarioRow.permisos as string[] : [];
+
+  const result = await runActionEngine({
     supabase,
     empresaId,
     usuarioId,
     message: userText,
-    history: session.history,
-    forTelegram: true,
+    permisos,
   });
 
-  const prefix = isVoice ? `🎤 _"${userText}"_\n\n` : '';
-  const responseText = prefix + result.text;
+  let responseText = result.texto;
+  if (result.confirmacion) {
+    responseText = formatConfirmationText(result.confirmacion).replace(/\*\*/g, '').replace(/_/g, '');
+  }
 
-  session = appendToHistory(session, userText, result.text);
-  await saveTelegramSession(supabase, usuarioId, session);
-  await sendTelegramMessage(chatId, responseText);
+  const prefix = isVoice ? `🎤 "${userText}"\n\n` : '';
+  await sendTelegramPlain(chatId, prefix + responseText);
 }

@@ -18,28 +18,38 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
+    const permisos = getEffectivePermisos(ctx.usuario);
+
     const result = await runActionEngine({
       supabase,
       empresaId: ctx.empresaId,
       usuarioId: ctx.usuario.id,
       message: message.trim(),
-      permisos: getEffectivePermisos(ctx.usuario),
+      permisos,
     });
 
     return NextResponse.json({
-      text: result.texto,
-      tipo: result.tipo,
-      confirmacion: result.confirmacion,
-      executed: result.tipo === 'ejecutado' || result.tipo === 'consulta',
-      executionResult: result.resultado,
+      ...result,
       providerLabel: getActiveProviderLabel(),
     });
   } catch (error: unknown) {
-    console.error('[AI Chat Error]', error);
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json(
-      { error: message, text: 'Hubo un error procesando tu solicitud.' },
-      { status: 500 },
-    );
+    console.error('[AI Engine Error]', error);
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ tipo: 'error', texto: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    const ctx = await resolveServerEmpresaId();
+    if (!ctx) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+
+    const supabase = await createClient();
+    const { clearSession } = await import('@/lib/ai/engine/session-manager');
+    await clearSession(supabase, ctx.usuario.id);
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

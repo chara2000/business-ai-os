@@ -328,6 +328,8 @@ export interface AIMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   accion?: AIAction;
+  confirmacion?: import('@/lib/ai/engine/types').ConfirmationCard;
+  session_id?: string;
   timestamp: Date;
 }
 

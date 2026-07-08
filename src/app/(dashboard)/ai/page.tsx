@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Bot, Send, Mic, MicOff, Zap, Sparkles, Package, TrendingUp,
-  Users, CreditCard, RefreshCw, Shield, Check
+  Users, CreditCard, RefreshCw, Shield,
 } from 'lucide-react';
+import { ActionConfirmationCard } from '@/components/ai/ActionConfirmationCard';
+import type { ConfirmationCard } from '@/lib/ai/engine/types';
 import type { AIMessage } from '@/types';
 
 const SUGGESTIONS = [
@@ -12,7 +14,7 @@ const SUGGESTIONS = [
   { text: '¿Quién me debe dinero?', icon: CreditCard, color: 'var(--danger-soft)', border: 'var(--danger)', iconColor: 'var(--danger)' },
   { text: 'Productos con stock bajo', icon: Package, color: 'var(--warning-soft)', border: 'var(--warning)', iconColor: 'var(--warning)' },
   { text: '¿Cuántos clientes tengo?', icon: Users, color: 'var(--success-soft)', border: 'var(--success)', iconColor: 'var(--success)' },
-  { text: 'Agregar 20 baterías Bosch', icon: Package, color: 'var(--info-soft)', border: 'var(--info)', iconColor: 'var(--info)' },
+  { text: 'Registrar 5 bombillas AX100', icon: Package, color: 'var(--info-soft)', border: 'var(--info)', iconColor: 'var(--info)' },
   { text: 'Generar reporte mensual', icon: TrendingUp, color: 'var(--bg-elevated)', border: 'var(--border)', iconColor: 'var(--text-secondary)' },
 ];
 
@@ -20,7 +22,7 @@ const INITIAL_MESSAGES: AIMessage[] = [
   {
     id: '0',
     role: 'assistant',
-    content: '¡Hola! 👋 Soy tu **Business AI**, con acceso completo a la información de tu organización.\n\nPuedo ayudarte a:\n- 📦 Gestionar y analizar inventario\n- 💰 Registrar operaciones financieras\n- 👥 Consultar cartera de clientes\n- 📊 Proyectar flujos de caja\n- 🎤 Procesar acciones de voz\n\n¿En qué te puedo asistir hoy?',
+    content: '¡Hola! 👋 Soy tu **Business Action Engine**.\n\nEscribe o habla en lenguaje natural — yo completo los datos y tú **confirmas** antes de guardar.\n\nEjemplos:\n• _Registrar 5 bombillas AX100_\n• _¿Cuánto vendí hoy?_\n• _Registra abono de Carlos por 200000_\n\nSin formularios complejos. Solo di lo que sabes.',
     timestamp: new Date(),
   },
 ];
@@ -32,45 +34,31 @@ function formatMessage(text: string) {
     .replace(/\n/g, '<br/>');
 }
 
-type ActionResult = {
-  accion: string;
-  entidad?: string;
-  datos?: Record<string, unknown>;
-  confirmacion_requerida?: boolean;
-};
-
 type ChatResponse = {
   text: string;
-  action?: ActionResult;
+  tipo?: string;
+  confirmacion?: ConfirmationCard;
+  session_id?: string;
   executed?: boolean;
   executionResult?: { success: boolean; message: string };
 };
 
-async function callAI(message: string, history: AIMessage[]): Promise<ChatResponse> {
-  const res = await fetch('/api/ai/chat', {
+async function callAI(message: string): Promise<ChatResponse> {
+  const res = await fetch('/api/ai/engine', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      history: history
-        .filter((m) => m.id !== '0')
-        .slice(-10)
-        .map((m) => ({ role: m.role, content: m.content })),
-    }),
+    body: JSON.stringify({ message }),
   });
   if (!res.ok) throw new Error('Error al contactar IA');
-  return res.json();
-}
-
-async function executeAction(action: ActionResult): Promise<{ success: boolean; message: string }> {
-  const res = await fetch('/api/ai/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action }),
-  });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message ?? json.error ?? 'Error al ejecutar');
-  return json;
+  return {
+    text: json.texto ?? json.text ?? '',
+    tipo: json.tipo,
+    confirmacion: json.confirmacion,
+    session_id: json.session_id,
+    executed: json.tipo === 'ejecutado' || json.tipo === 'consulta',
+    executionResult: json.resultado,
+  };
 }
 
 export default function AIPage() {
@@ -86,26 +74,33 @@ export default function AIPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  const handleExecuteAction = async (msgId: string, action: ActionResult) => {
+  const handleConfirm = async (msgId: string) => {
     setExecutingId(msgId);
     try {
-      const result = await executeAction(action);
-      setMessages((prev) => prev.map((m) => {
-        if (m.id !== msgId) return m;
-        const suffix = result.success ? `✅ ${result.message}` : `❌ ${result.message}`;
-        return {
-          ...m,
-          content: `${m.content}\n\n${suffix}`,
-          accion: undefined,
-        };
-      }));
+      const result = await callAI('Confirmar');
+      setMessages((prev) => [
+        ...prev.map((m) => (m.id === msgId ? { ...m, confirmacion: undefined, session_id: undefined } : m)),
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: result.text,
+          timestamp: new Date(),
+        },
+      ]);
     } catch {
       setMessages((prev) => prev.map((m) =>
-        m.id === msgId ? { ...m, content: `${m.content}\n\n❌ No se pudo ejecutar la acción.` } : m
+        m.id === msgId ? { ...m, content: `${m.content}\n\n❌ No se pudo ejecutar.` } : m
       ));
     } finally {
       setExecutingId(null);
     }
+  };
+
+  const handleCancel = async (msgId: string) => {
+    await fetch('/api/ai/engine', { method: 'DELETE' });
+    setMessages((prev) => prev.map((m) =>
+      m.id === msgId ? { ...m, confirmacion: undefined, content: `${m.content}\n\n❌ Cancelado.` } : m
+    ));
   };
 
   useEffect(() => {
@@ -123,17 +118,14 @@ export default function AIPage() {
     setLoading(true);
 
     try {
-      const result = await callAI(msg, messages);
+      const result = await callAI(msg);
       const msgId = (Date.now() + 1).toString();
-      let content = result.text;
-      if (result.executed && result.executionResult?.message) {
-        const prefix = result.executionResult.success ? '✅' : '❌';
-        content = content ? `${content}\n\n${prefix} ${result.executionResult.message}` : `${prefix} ${result.executionResult.message}`;
-      }
       const aiMsg: AIMessage = {
         id: msgId,
         role: 'assistant',
-        content,
+        content: result.text,
+        confirmacion: result.confirmacion,
+        session_id: result.session_id,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiMsg]);
@@ -212,14 +204,15 @@ export default function AIPage() {
     }
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
+    await fetch('/api/ai/engine', { method: 'DELETE' });
     setMessages(INITIAL_MESSAGES);
     setShowWelcome(true);
   };
 
   return (
-    <div className="page-fintech-wrap">
-    <div className="fintech-card" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--topbar-height) - 40px)', gap: 0, overflow: 'hidden', padding: 0 }}>
+    <div className="page-fintech-wrap ai-page-wrap">
+    <div className="fintech-card ai-chat-shell">
 
       {/* Top bar */}
       <div style={{
@@ -332,28 +325,14 @@ export default function AIPage() {
               </div>
 
               {/* Action badge */}
-              {msg.accion && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-                    background: 'var(--warning-soft)', border: '1px solid var(--warning)', borderRadius: 20,
-                  }}>
-                    <Shield size={12} color="var(--warning)" />
-                    <span style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Acción pendiente: {msg.accion.accion}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
-                    disabled={executingId === msg.id}
-                    onClick={() => handleExecuteAction(msg.id, msg.accion!)}
-                  >
-                    <Check size={14} />
-                    {executingId === msg.id ? 'Ejecutando...' : 'Confirmar y ejecutar'}
-                  </button>
-                </div>
+              {msg.confirmacion && (
+                <ActionConfirmationCard
+                  card={msg.confirmacion}
+                  loading={executingId === msg.id}
+                  onConfirm={() => handleConfirm(msg.id)}
+                  onCancel={() => handleCancel(msg.id)}
+                  onSuggest={(text) => { setInput(text); inputRef.current?.focus(); }}
+                />
               )}
 
               <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
