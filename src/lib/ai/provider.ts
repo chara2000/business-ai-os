@@ -78,11 +78,15 @@ function buildGeminiHistory(messages: ChatMessage[]): { history: Content[]; user
   // Fusionar turnos consecutivos del mismo rol
   const merged: Content[] = [];
   for (const turn of history) {
+    const turnText = turn.parts[0]?.text ?? '';
     const prev = merged[merged.length - 1];
     if (prev && prev.role === turn.role) {
-      prev.parts[0].text += `\n\n${turn.parts[0].text}`;
+      const prevPart = prev.parts[0];
+      if (prevPart && 'text' in prevPart) {
+        prevPart.text = `${prevPart.text ?? ''}\n\n${turnText}`;
+      }
     } else {
-      merged.push({ role: turn.role, parts: [{ text: turn.parts[0].text }] });
+      merged.push({ role: turn.role, parts: [{ text: turnText }] });
     }
   }
 
