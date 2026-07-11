@@ -150,14 +150,14 @@ export const AI_TOOLS: AITool[] = [
   {
     type: 'function',
     function: {
-      name: 'financial_dashboard',
-      description: 'Obtiene un resumen de ventas, gastos y utilidades de un rango de tiempo específico.',
+      name: 'consulta_dinamica',
+      description: 'Resuelve preguntas del negocio o consultas complejas sobre ventas, inventario, stock, egresos o reportes directamente en la base de datos usando consultas analíticas seguras.',
       parameters: {
         type: 'object',
         properties: {
-          periodo: { type: 'string', description: 'Periodo a consultar (ej. "hoy", "este_mes", "semana_pasada")' }
+          pregunta: { type: 'string', description: 'La pregunta o reporte completo que hace el usuario. Ej. "cuánto se vendió hoy", "cuáles productos tienen stock mayor a 30", "dame un reporte de lo que se vendió".' }
         },
-        required: ['periodo']
+        required: ['pregunta']
       }
     }
   }

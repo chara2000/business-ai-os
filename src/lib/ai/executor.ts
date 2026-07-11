@@ -432,9 +432,14 @@ export async function executeAIAction(
           if (marId) updates.marca_id = marId;
         }
 
+        if (updates.stock_actual != null) {
+          const val = Number(updates.stock_actual);
+          updates.stock_actual = Math.max(0, val);
+        }
+
         if (datos.cantidad != null) {
           const add = Number(datos.cantidad);
-          const stockNuevo = producto.stock_actual + add;
+          const stockNuevo = Math.max(0, producto.stock_actual + add);
           updates.stock_actual = stockNuevo;
           await supabase.from('movimientos_inventario').insert([{
             empresa_id: empresaId,

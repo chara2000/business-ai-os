@@ -285,7 +285,7 @@ export default function InventarioPage() {
       || (p.codigo_barras ?? '').toLowerCase().includes(q);
     const matchStatus = filterStatus === 'all' ? true :
       filterStatus === 'low' ? p.stock_actual > 0 && p.stock_actual <= p.stock_minimo :
-      p.stock_actual === 0;
+      p.stock_actual <= 0;
     return matchSearch && matchStatus;
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -297,8 +297,8 @@ export default function InventarioPage() {
   const stats = {
     total: products.length,
     low: products.filter(p => p.stock_actual > 0 && p.stock_actual <= p.stock_minimo).length,
-    out: products.filter(p => p.stock_actual === 0).length,
-    value: products.reduce((s, p) => s + (p.precio_venta * p.stock_actual), 0),
+    out: products.filter(p => p.stock_actual <= 0).length,
+    value: products.reduce((s, p) => s + (p.precio_venta * Math.max(0, p.stock_actual)), 0),
   };
 
   const handleScanSearch = (raw: string) => {
@@ -433,7 +433,7 @@ export default function InventarioPage() {
             <tbody>
               {paginated.map(p => {
                 const isLow = p.stock_actual > 0 && p.stock_actual <= p.stock_minimo;
-                const isOut = p.stock_actual === 0;
+                const isOut = p.stock_actual <= 0;
                 return (
                   <tr key={p.id}>
                     <td>
@@ -467,7 +467,7 @@ export default function InventarioPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {(isOut || isLow) && <AlertTriangle size={12} color={isOut ? 'var(--danger)' : 'var(--warning)'} />}
                         <span style={{ fontWeight: 600, color: isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--success)' }}>
-                          {p.stock_actual} {p.unidad}
+                          {Math.max(0, p.stock_actual)} {p.unidad}
                         </span>
                       </div>
                     </td>
@@ -499,7 +499,7 @@ export default function InventarioPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
           {filtered.map(p => {
             const isLow = p.stock_actual > 0 && p.stock_actual <= p.stock_minimo;
-            const isOut = p.stock_actual === 0;
+            const isOut = p.stock_actual <= 0;
             return (
               <div key={p.id} className="card" style={{ padding: 18 }}>
                 <div style={{
@@ -520,7 +520,7 @@ export default function InventarioPage() {
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stock</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--success)' }}>
-                      {p.stock_actual} {p.unidad}
+                      {Math.max(0, p.stock_actual)} {p.unidad}
                     </div>
                   </div>
                 </div>

@@ -1,12 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { aiJsonCompletion } from '@/lib/ai/provider';
 
-// Un esquema simplificado de la base de datos para inyectar en el LLM
 const DB_SCHEMA = `
 Tablas principales disponibles (PostgreSQL):
 - ventas: id, empresa_id, cliente_id, usuario_id, total, estado, created_at
-- compras: id, empresa_id, proveedor_id, total, estado, created_at
-- productos: id, empresa_id, nombre, categoria_id, marca_id, precio_venta, precio_compra, stock_actual, stock_minimo, activo
+- items_venta: id, venta_id, producto_id, cantidad, precio_unitario, subtotal
+- ordenes_compra (compras): id, empresa_id, proveedor_id, numero, estado, total, subtotal, impuestos, notas, metodo_pago, es_credito, created_at, fecha_entrega_esperada
+- items_orden_compra: id, orden_compra_id, producto_id, cantidad, precio_unitario, subtotal, cantidad_recibida
+- productos: id, empresa_id, nombre, categoria_id, marca_id, precio_venta, precio_costo, stock_actual, stock_minimo, activo
 - clientes: id, empresa_id, nombre, telefono, email
 - proveedores: id, empresa_id, nombre, telefono
 - gastos: id, empresa_id, usuario_id, categoria, monto, concepto, metodo_pago, created_at
@@ -30,8 +31,9 @@ Reglas:
 3. Solo están permitidos los SELECT. NUNCA insert, update o delete.
 4. No te preocupes por el "empresa_id", las políticas RLS aislarán los datos automáticamente.
 5. Puedes hacer JOINs entre tablas.
-6. Si te piden fechas, usa los formatos estándar de PostgreSQL (ej. CURRENT_DATE, date_trunc, etc).
-7. Siempre asume que los nombres de las columnas coinciden con el esquema dado.`;
+6. Si te piden fechas, usa los formatos estándar de PostgreSQL. Para consultas de "hoy", usa: created_at::date = CURRENT_DATE.
+7. Para comparar nombres de productos, categorías, marcas o clientes, usa SIEMPRE 'ILIKE' con comodines (ej: p.nombre ILIKE '%bateria%') para evitar fallas por variaciones de mayúsculas/minúsculas o palabras parciales.
+8. Siempre asume que los nombres de las columnas coinciden con el esquema dado.`;
 
 const SQL_EXPLANATION_PROMPT = `Eres el Director de Operaciones (AI Core). Acabas de ejecutar una consulta analítica en la base de datos para responder a una pregunta del usuario.
 
