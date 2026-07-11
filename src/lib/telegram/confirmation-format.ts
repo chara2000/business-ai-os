@@ -164,7 +164,7 @@ function formatCompraListo(card: ConfirmationCard): string {
   
   const margen = ventaVal > 0 && unitario > 0 ? Math.round(((ventaVal - unitario) / ventaVal) * 100) : 43;
 
-  const codigo = fieldValue(card.campos, 'codigo') ?? card.args?.codigo ?? `PRD-${Math.floor(1000 + Math.random() * 9000)}`;
+  const codigo = fieldValue(card.campos, 'codigo') ?? (card as any).args?.codigo ?? `PRD-${Math.floor(1000 + Math.random() * 9000)}`;
   const metodo = fieldValue(card.campos, 'metodo_pago');
   const esCredito = metodo === 'credito' || card.campos.some((c) => c.key === 'es_credito' && c.value === true);
 

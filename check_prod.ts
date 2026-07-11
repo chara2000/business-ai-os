@@ -9,17 +9,23 @@ const supabase = createClient(
 );
 
 async function main() {
-  const { data, error } = await supabase
-    .from('productos')
-    .select('id, nombre, stock_actual, precio_venta, precio_costo')
-    .eq('empresa_id', 'bbae9d2f-04e4-4d25-b096-311101532225')
-    .ilike('nombre', '%Yamaha%');
+  const prodId = '26ea5798-2c88-4dd6-a3b3-d8069c472533'; // Neumático
+
+  const { data: movements, error: movErr } = await supabase
+    .from('movimientos_inventario')
+    .select('*')
+    .eq('producto_id', prodId);
   
-  if (error) {
-    console.error('Error:', error);
-  } else {
-    console.log('Productos Yamaha:', JSON.stringify(data, null, 2));
-  }
+  console.log('--- MOVEMENTS ---');
+  console.log(JSON.stringify(movements, null, 2));
+
+  const { data: orderItems, error: itemErr } = await supabase
+    .from('items_orden_compra')
+    .select('*')
+    .eq('producto_id', prodId);
+
+  console.log('--- ORDER ITEMS ---');
+  console.log(JSON.stringify(orderItems, null, 2));
 }
 
 main();

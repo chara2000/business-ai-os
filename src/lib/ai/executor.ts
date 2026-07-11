@@ -608,7 +608,7 @@ export async function executeAIAction(
 
       case 'crear_venta': {
         // Support both single product (legacy) and multi-product array
-        type ProductoInput = { producto: string; cantidad?: number; precio?: number };
+        type ProductoInput = { producto?: string; nombre?: string; cantidad?: number; precio?: number };
         const productosRaw = datos.productos as ProductoInput[] | undefined;
         const isSingleProduct = !productosRaw || !Array.isArray(productosRaw) || productosRaw.length === 0;
 
