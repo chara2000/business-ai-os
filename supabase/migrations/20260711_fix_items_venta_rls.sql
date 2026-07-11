@@ -33,3 +33,14 @@ USING (
 WITH CHECK (
   empresa_id = (SELECT empresa_id FROM public.usuarios WHERE auth_user_id = auth.uid() LIMIT 1)
 );
+
+-- 3. Add items_orden_compra policies
+DROP POLICY IF EXISTS "items_orden_compra_tenant_isolation" ON public.items_orden_compra;
+CREATE POLICY "items_orden_compra_tenant_isolation" ON public.items_orden_compra
+  FOR ALL USING (
+    orden_compra_id IN (
+      SELECT id FROM public.ordenes_compra WHERE empresa_id = (
+        SELECT empresa_id FROM public.usuarios WHERE auth_user_id = auth.uid() LIMIT 1
+      )
+    )
+  );

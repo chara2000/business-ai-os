@@ -38,11 +38,14 @@ function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T
     for (const t of qTokens) {
       // Remover la 's' final para ayudar con plurales/singulares básicos
       const singular = t.endsWith('s') ? t.slice(0, -1) : t;
+      const isModelCode = /\d/.test(t);
+      const weightMultiplier = isModelCode ? 2 : 1;
+
       if (targetName.includes(t)) {
-        score += t.length;
+        score += t.length * weightMultiplier;
         tokensMatched++;
       } else if (targetName.includes(singular)) {
-        score += singular.length;
+        score += singular.length * weightMultiplier;
         tokensMatched++;
       }
     }
