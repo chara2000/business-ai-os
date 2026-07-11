@@ -893,6 +893,8 @@ export async function executeAIAction(
           descuento: 0,
           impuestos,
           total,
+          metodo_pago: metodoPago || 'efectivo',
+          es_credito: esCredito || false,
           fecha_recepcion: fechaRecepcion,
           notas: notas || `Compra registrada vía AI Action Engine (${esCredito ? 'crédito' : metodoPago})`,
           usuario_id: usuarioId,
