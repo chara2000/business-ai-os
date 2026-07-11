@@ -264,7 +264,7 @@ export default function InventarioPage() {
   const fetchProducts = useCallback(async () => {
     if (!empresaId) return;
     setLoading(true);
-    const { data, error } = await supabase.from('productos').select('*, categoria:categorias(nombre)').eq('empresa_id', empresaId).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('productos').select('*, categoria:categorias(id, nombre), marca:marcas(id, nombre)').eq('empresa_id', empresaId).order('created_at', { ascending: false });
     if (error) toast.error('Error al cargar inventario');
     else setProducts(data || []);
     setLoading(false);

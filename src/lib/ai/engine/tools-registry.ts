@@ -55,7 +55,11 @@ export const AI_TOOLS: AITool[] = [
             }
           },
           es_credito: { type: 'boolean', description: 'True si se le debe al proveedor (compra a crédito)' },
-          metodo_pago: { type: 'string', description: 'Método de pago usado' }
+          metodo_pago: { type: 'string', description: 'Método de pago usado' },
+          precio_venta: { type: 'number', description: 'Precio de venta del producto (si no viene dentro del array de productos)' },
+          categoria: { type: 'string', description: 'Categoría del producto (infiere del contexto)' },
+          marca: { type: 'string', description: 'Marca del producto (infiere del contexto)' },
+          codigo: { type: 'string', description: 'Código PRD del producto (si ya fue generado en la tarjeta de confirmación)' }
         },
         required: ['productos']
       }

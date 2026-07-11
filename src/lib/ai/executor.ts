@@ -379,25 +379,6 @@ export async function executeAIAction(
         };
       }
 
-      case 'crear_compra': {
-        // ... (el resto del código omitido para brevedad en este ejemplo)
-        
-        await logAudit(supabase, {
-          empresaId,
-          usuarioId,
-          accion: 'crear_compra',
-          entidad: 'compra',
-          entidadId: compra.id,
-          datosNuevos: producto as Record<string, unknown>,
-        });
-
-        return {
-          success: true,
-          message: `Compra registrada exitosamente. Orden ${numero}. Se han añadido ${cantidad} unidades de ${nombre} al inventario. (Código: ${producto.codigo})`,
-          data: producto,
-        };
-      }
-
       case 'actualizar_producto': {
         const nombre = String(datos.nombre ?? datos.producto ?? '').trim();
         const producto = datos.producto_id
@@ -773,7 +754,10 @@ export async function executeAIAction(
         const proveedorNombre = String(datos.proveedor ?? '').trim();
         const cantidad = Number(primerProducto?.cantidad ?? datos.cantidad ?? 0);
         const precioUnit = Number(primerProducto?.costo_unitario ?? primerProducto?.precio_costo ?? datos.precio_costo ?? 0);
-        const precioVenta = primerProducto?.precio_venta ? Number(primerProducto.precio_venta) : Math.round(precioUnit * 1.3);
+        // Usar precio_venta del usuario. Si no viene en el producto, intentar datos.precio_venta.
+        // Solo calcular x1.3 si no hay ningún precio_venta especificado.
+        const precioVentaRaw = primerProducto?.precio_venta ?? datos.precio_venta ?? null;
+        const precioVenta = precioVentaRaw ? Number(precioVentaRaw) : Math.round(precioUnit * 1.3);
         const categoriaNuevo = String(primerProducto?.categoria ?? datos.categoria ?? '').trim();
         const marcaNuevo = String(primerProducto?.marca ?? datos.marca ?? '').trim();
 
@@ -809,10 +793,10 @@ export async function executeAIAction(
               codigo,
               nombre,
               precio_costo: precioUnit,
-              precio_venta: Math.round(precioUnit * 1.3),
+              precio_venta: precioVenta,
+              margen: precioVenta > 0 ? Math.round(((precioVenta - precioUnit) / precioVenta) * 100) : 23,
               stock_actual: 0,
               stock_minimo: 5,
-              margen: 23,
               unidad: 'unidad',
               categoria_id: categoriaId,
               marca_id: marcaId,
@@ -867,8 +851,10 @@ export async function executeAIAction(
           precio_costo: costoPromedio,
         };
 
-        if (precioVenta > 0 && precioVenta !== producto.precio_venta) {
+        // Actualizar precio_venta al valor especificado por el usuario
+        if (precioVentaRaw && precioVenta > 0) {
           updatePayload.precio_venta = precioVenta;
+          updatePayload.margen = Math.round(((precioVenta - costoPromedio) / precioVenta) * 100);
         }
 
         if (categoriaNuevo) {
