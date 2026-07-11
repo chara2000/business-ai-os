@@ -197,7 +197,6 @@ export default function ProveedoresPage() {
 
   return (
     <ModuleShell
-      boundedTable
       stats={moduleStats}
       toolbar={
         <>

@@ -19,7 +19,7 @@ function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T
   const exact = items.find(i => String((i as any)[nameKey]).toLowerCase().trim() === normQuery);
   if (exact) return exact;
 
-  const qTokens = normQuery.split(/\s+/).filter(w => w.length > 2);
+  const qTokens = normQuery.split(/\s+/).filter(w => w.length > 1); // lowered to >1 to capture NKD, etc.
   
   let bestMatch: T | null = null;
   let maxScore = 0;
@@ -58,8 +58,8 @@ function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T
     }
   }
 
-  // Threshold debe ser al menos 4 (ej. para aceptar una palabra parcial), pero si es multi-palabra debe ser mayor
-  return maxScore >= 4 ? bestMatch : null;
+  // Threshold: 3 para capturar siglas cortas (NKD=3), 4 para palabras medias
+  return maxScore >= 3 ? bestMatch : null;
 }
 
 async function findProductoByName(supabase: SupabaseClient, empresaId: string, nombre: string) {
@@ -646,7 +646,32 @@ export async function executeAIAction(
         for (const item of itemsToProcess) {
           if (!item.productoNombre) continue;
           const productoRecord = await findProductoByName(supabase, empresaId, item.productoNombre);
-          if (!productoRecord) return { success: false, message: `No encontré "${item.productoNombre}" en inventario.` };
+          if (!productoRecord) {
+            // Buscar alternativas para dar un mensaje útil
+            const { data: allProds } = await supabase
+              .from('productos')
+              .select('nombre, stock_actual')
+              .eq('empresa_id', empresaId)
+              .eq('activo', true)
+              .limit(200);
+
+            // Buscar por cualquier token del nombre (incluyendo siglas de 2+ letras)
+            const tokens = item.productoNombre.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+            const similares = (allProds || []).filter(p => {
+              const pn = p.nombre.toLowerCase();
+              return tokens.some(t => pn.includes(t));
+            }).slice(0, 3);
+
+            if (similares.length > 0) {
+              const lista = similares.map(p => `• "${p.nombre}" (${p.stock_actual} uds)`).join('\n');
+              return {
+                success: false,
+                message: `No encontré "${item.productoNombre}" exactamente. ¿Quisiste decir alguno de estos?\n${lista}\nDíctame el nombre exacto del producto.`
+              };
+            }
+
+            return { success: false, message: `No encontré "${item.productoNombre}" en el inventario.` };
+          }
           if (productoRecord.stock_actual < item.cantidad) {
             return { success: false, message: `Stock insuficiente para "${productoRecord.nombre}". Disponible: ${productoRecord.stock_actual}.` };
           }
