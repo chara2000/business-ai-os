@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   ShoppingCart, Plus, Eye, Check, Scan,
   DollarSign, Package, ChevronRight, CheckCircle2,
-  Clock, Building2, Trash2,
+  Clock, Building2, Trash2, Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -40,6 +40,9 @@ type Orden = {
   created_at: string;
   fecha_entrega_esperada?: string;
   notas?: string;
+  proveedor_id?: string;
+  metodo_pago?: string;
+  es_credito?: boolean;
   proveedor?: { nombre: string };
   items_orden_compra?: { id: string; producto_id: string; cantidad: number; precio_unitario: number; subtotal: number; producto?: { nombre: string; codigo: string } }[];
 };
@@ -54,6 +57,8 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
   const [estado, setEstado] = useState('solicitud');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notas, setNotas] = useState('');
+  const [metodoPago, setMetodoPago] = useState('efectivo');
+  const [esCredito, setEsCredito] = useState(false);
   const [items, setItems] = useState<LineItem[]>([{ producto_id: '', cantidad: 1, precio: 0, subtotal: 0 }]);
   const [loading, setLoading] = useState(false);
   const [showOcr, setShowOcr] = useState(false);
@@ -99,6 +104,16 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
     );
   };
 
+  const updatePrecio = (idx: number, precio: number) => {
+    setItems((it) =>
+      it.map((item, i) => {
+        if (i !== idx) return item;
+        const p = Math.max(0, precio);
+        return { ...item, precio: p, subtotal: item.cantidad * p };
+      }),
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proveedorId) { toast.error('Selecciona un proveedor'); return; }
@@ -122,6 +137,8 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
       total,
       fecha_entrega_esperada: fechaEntrega || null,
       notas,
+      metodo_pago: metodoPago,
+      es_credito: esCredito,
       usuario_id,
     }]).select('id').single();
 
@@ -193,6 +210,23 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
               <label className="form-label">Entrega esperada</label>
               <input type="date" className="input" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
             </div>
+            <div className="input-wrapper">
+              <label className="form-label">Método de pago</label>
+              <select className="select" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="nequi">Nequi</option>
+                <option value="daviplata">Daviplata</option>
+                <option value="tarjeta">Tarjeta</option>
+              </select>
+            </div>
+            <div className="input-wrapper" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <label className="form-label">Condición de pago</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '40px' }}>
+                <input type="checkbox" id="es_credito" checked={esCredito} onChange={(e) => setEsCredito(e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--brand)' }} />
+                <label htmlFor="es_credito" style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Compra a Crédito</label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -206,12 +240,13 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
           <div className="modal-line-list">
             {items.map((item, idx) => (
               <div key={idx} className="modal-line-row">
-                <select className="select" value={item.producto_id} onChange={(e) => updateItem(idx, e.target.value)} required>
+                <select className="select" value={item.producto_id} onChange={(e) => updateItem(idx, e.target.value)} required style={{ flex: 2 }}>
                   <option value="">Producto</option>
                   {productos.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
                 </select>
-                <input type="number" className="input" min={1} value={item.cantidad} onChange={(e) => updateCantidad(idx, +e.target.value)} />
-                <div className="line-subtotal">${item.subtotal.toLocaleString()}</div>
+                <input type="number" className="input" placeholder="Cant." min={1} value={item.cantidad} onChange={(e) => updateCantidad(idx, +e.target.value)} style={{ width: 80 }} />
+                <input type="number" className="input" placeholder="Costo" min={0} value={item.precio} onChange={(e) => updatePrecio(idx, +e.target.value)} style={{ width: 120 }} />
+                <div className="line-subtotal" style={{ width: 100, textAlign: 'right' }}>${item.subtotal.toLocaleString()}</div>
                 {items.length > 1 && (
                   <button type="button" className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setItems((it) => it.filter((_, i) => i !== idx))}>
                     <Trash2 size={14} />
@@ -246,6 +281,263 @@ function NuevaOrdenModal({ onClose, onSaved, tasaIva }: { onClose: () => void; o
   );
 }
 
+function EditarOrdenModal({ orden, onClose, onSaved, tasaIva }: { orden: Orden; onClose: () => void; onSaved: () => void; tasaIva: number }) {
+  const empresaId = getEmpresaId();
+  const [proveedores, setProveedores] = useState<{ id: string; nombre: string }[]>([]);
+  const [productos, setProductos] = useState<{ id: string; nombre: string; codigo: string; precio_costo: number }[]>([]);
+  const [proveedorId, setProveedorId] = useState(orden.proveedor_id || '');
+  const [estado, setEstado] = useState(orden.estado);
+  const [fechaEntrega, setFechaEntrega] = useState(orden.fecha_entrega_esperada ? orden.fecha_entrega_esperada.split('T')[0] : '');
+  const [notas, setNotas] = useState(orden.notas || '');
+  const [metodoPago, setMetodoPago] = useState(orden.metodo_pago || 'efectivo');
+  const [esCredito, setEsCredito] = useState(orden.es_credito || false);
+  const [items, setItems] = useState<LineItem[]>(
+    orden.items_orden_compra?.map((it) => ({
+      producto_id: it.producto_id,
+      cantidad: it.cantidad,
+      precio: it.precio_unitario,
+      subtotal: it.subtotal,
+    })) || []
+  );
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!empresaId) return;
+    Promise.all([
+      supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true),
+      supabase.from('productos').select('id, nombre, codigo, precio_costo').eq('empresa_id', empresaId).eq('activo', true),
+    ]).then(([p, pr]) => {
+      setProveedores(p.data ?? []);
+      setProductos(pr.data ?? []);
+    });
+  }, [empresaId]);
+
+  const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
+  const { impuestos, total } = calcImpuestos(subtotal, 0, tasaIva);
+
+  const updateItem = (idx: number, productoId: string) => {
+    const prod = productos.find((p) => p.id === productoId);
+    setItems((it) =>
+      it.map((item, i) => {
+        if (i !== idx) return item;
+        const precio = prod?.precio_costo ?? 0;
+        const cantidad = item.cantidad || 1;
+        return { producto_id: productoId, cantidad, precio, subtotal: cantidad * precio };
+      }),
+    );
+  };
+
+  const updateCantidad = (idx: number, cantidad: number) => {
+    setItems((it) =>
+      it.map((item, i) => {
+        if (i !== idx) return item;
+        const qty = Math.max(1, cantidad);
+        return { ...item, cantidad: qty, subtotal: qty * item.precio };
+      }),
+    );
+  };
+
+  const updatePrecio = (idx: number, precio: number) => {
+    setItems((it) =>
+      it.map((item, i) => {
+        if (i !== idx) return item;
+        const p = Math.max(0, precio);
+        return { ...item, precio: p, subtotal: item.cantidad * p };
+      }),
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proveedorId) { toast.error('Selecciona un proveedor'); return; }
+    if (items.some((i) => !i.producto_id)) { toast.error('Completa todos los productos'); return; }
+
+    setLoading(true);
+
+    const yaEstabaRecibida = orden.estado === 'recibida';
+    const ahoraRecibida = estado === 'recibida';
+
+    const { error: updateError } = await supabase
+      .from('ordenes_compra')
+      .update({
+        proveedor_id: proveedorId,
+        estado,
+        subtotal,
+        impuestos,
+        total,
+        fecha_entrega_esperada: fechaEntrega || null,
+        notas,
+        metodo_pago: metodoPago,
+        es_credito: esCredito,
+      })
+      .eq('id', orden.id);
+
+    if (updateError) {
+      toast.error('Error al actualizar orden: ' + updateError.message);
+      setLoading(false);
+      return;
+    }
+
+    await supabase.from('items_orden_compra').delete().eq('orden_compra_id', orden.id);
+
+    const { error: itemsError } = await supabase.from('items_orden_compra').insert(
+      items.map((i) => ({
+        orden_compra_id: orden.id,
+        producto_id: i.producto_id,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio,
+        subtotal: i.subtotal,
+        cantidad_recibida: ahoraRecibida ? i.cantidad : 0,
+      })),
+    );
+
+    if (itemsError) {
+      toast.error('Error al actualizar ítems: ' + itemsError.message);
+    } else {
+      if (ahoraRecibida && !yaEstabaRecibida) {
+        const empresa_id = getEmpresaId();
+        const usuario_id = getUsuarioId();
+        if (empresa_id && usuario_id) {
+          for (const item of items) {
+            const { data: prod } = await supabase.from('productos').select('stock_actual, precio_costo').eq('id', item.producto_id).single();
+            if (!prod) continue;
+            const stockNuevo = prod.stock_actual + item.cantidad;
+            await supabase.from('productos').update({ stock_actual: stockNuevo, precio_costo: item.precio }).eq('id', item.producto_id);
+            await supabase.from('movimientos_inventario').insert([{
+              empresa_id,
+              producto_id: item.producto_id,
+              tipo: 'entrada',
+              cantidad: item.cantidad,
+              stock_anterior: prod.stock_actual,
+              stock_nuevo: stockNuevo,
+              costo_unitario: item.precio,
+              motivo: `Recepción ${orden.numero}`,
+              referencia_id: orden.id,
+              referencia_tipo: 'orden_compra',
+              usuario_id,
+            }]);
+          }
+        }
+      }
+      toast.success('Orden actualizada ✓');
+      onSaved();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <FormModal
+      open
+      onClose={onClose}
+      title={`Editar Orden ${orden.numero}`}
+      subtitle="Actualizar datos de reabastecimiento"
+      icon={Pencil}
+      size="xl"
+      bodyScroll="always"
+      footer={
+        <>
+          <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <ActionButton loading={loading} onClick={handleSubmit as unknown as React.MouseEventHandler}>
+            {loading ? 'Guardando...' : 'Guardar Cambios'}
+          </ActionButton>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="modal-form">
+        <div className="modal-form-section">
+          <h3 className="modal-form-section-title">Proveedor</h3>
+          <div className="modal-form-grid">
+            <div className="input-wrapper">
+              <label className="form-label">Proveedor *</label>
+              <select className="select" value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} required disabled={orden.estado === 'recibida'}>
+                <option value="">Seleccionar...</option>
+                {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+            <div className="input-wrapper">
+              <label className="form-label">Estado</label>
+              <select className="select" value={estado} onChange={(e) => setEstado(e.target.value)} disabled={orden.estado === 'recibida'}>
+                {Object.entries(ESTADOS).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="input-wrapper">
+              <label className="form-label">Entrega esperada</label>
+              <input type="date" className="input" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} disabled={orden.estado === 'recibida'} />
+            </div>
+            <div className="input-wrapper">
+              <label className="form-label">Método de pago</label>
+              <select className="select" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} disabled={orden.estado === 'recibida'}>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="nequi">Nequi</option>
+                <option value="daviplata">Daviplata</option>
+                <option value="tarjeta">Tarjeta</option>
+              </select>
+            </div>
+            <div className="input-wrapper" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <label className="form-label">Condición de pago</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '40px' }}>
+                <input type="checkbox" id="edit_es_credito" checked={esCredito} onChange={(e) => setEsCredito(e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--brand)' }} disabled={orden.estado === 'recibida'} />
+                <label htmlFor="edit_es_credito" style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Compra a Crédito</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-form-section">
+          <div className="modal-section-head">
+            <h3 className="modal-form-section-title">Productos</h3>
+            {orden.estado !== 'recibida' && (
+              <button type="button" className="btn-ghost" onClick={() => setItems((it) => [...it, { producto_id: '', cantidad: 1, precio: 0, subtotal: 0 }])}>
+                <Plus size={14} /> Agregar
+              </button>
+            )}
+          </div>
+          <div className="modal-line-list">
+            {items.map((item, idx) => (
+              <div key={idx} className="modal-line-row">
+                <select className="select" value={item.producto_id} onChange={(e) => updateItem(idx, e.target.value)} required disabled={orden.estado === 'recibida'} style={{ flex: 2 }}>
+                  <option value="">Producto</option>
+                  {productos.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
+                </select>
+                <input type="number" className="input" placeholder="Cant." min={1} value={item.cantidad} onChange={(e) => updateCantidad(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 80 }} />
+                <input type="number" className="input" placeholder="Costo" min={0} value={item.precio} onChange={(e) => updatePrecio(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 120 }} />
+                <div className="line-subtotal" style={{ width: 100, textAlign: 'right' }}>${item.subtotal.toLocaleString()}</div>
+                {items.length > 1 && orden.estado !== 'recibida' && (
+                  <button type="button" className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setItems((it) => it.filter((_, i) => i !== idx))}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="modal-info-row" style={{ marginTop: 12 }}>
+            <span className="muted">Subtotal</span>
+            <strong>${subtotal.toLocaleString()}</strong>
+          </div>
+          <div className="modal-info-row">
+            <span className="muted">IVA ({formatTasaIva(tasaIva)})</span>
+            <strong>${impuestos.toLocaleString()}</strong>
+          </div>
+          <div className="modal-info-row modal-info-row--success">
+            <span className="muted">Total orden</span>
+            <strong>${total.toLocaleString()}</strong>
+          </div>
+        </div>
+
+        <div className="modal-form-section">
+          <div className="input-wrapper">
+            <label className="form-label">Notas</label>
+            <input className="input" value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Observaciones..." disabled={orden.estado === 'recibida'} />
+          </div>
+        </div>
+      </form>
+    </FormModal>
+  );
+}
+
 export default function ComprasPage() {
   const { empresaId, empresa } = useEmpresa();
   const tasaIva = getTasaIva(empresa);
@@ -253,6 +545,7 @@ export default function ComprasPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showNueva, setShowNueva] = useState(false);
+  const [editando, setEditando] = useState<Orden | null>(null);
   const [detalle, setDetalle] = useState<Orden | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -323,6 +616,22 @@ export default function ComprasPage() {
     fetchOrdenes();
   };
 
+  const eliminarOrden = async (orden: Orden) => {
+    if (!window.confirm(`¿Estás seguro de eliminar la orden ${orden.numero}?`)) return;
+
+    if (orden.estado === 'recibida') {
+      if (!window.confirm('Esta orden ya fue RECIBIDA. Eliminarla NO revertirá automáticamente el stock de los productos. ¿Deseas continuar?')) return;
+    }
+
+    const { error } = await supabase.from('ordenes_compra').delete().eq('id', orden.id);
+    if (error) {
+      toast.error('Error al eliminar la orden: ' + error.message);
+    } else {
+      toast.success('Orden eliminada exitosamente');
+      fetchOrdenes();
+    }
+  };
+
   const moduleStats = [
     { label: 'Órdenes activas', value: ordenes.filter((o) => o.estado !== 'cancelada' && o.estado !== 'recibida').length, icon: ShoppingCart, tone: 'brand' as const },
     { label: 'En tránsito', value: ordenes.filter((o) => o.estado === 'orden').length, icon: Clock, tone: 'warning' as const },
@@ -388,7 +697,7 @@ export default function ComprasPage() {
                 <th>Total</th>
                 <th>Emisión</th>
                 <th>Entrega</th>
-                <th style={{ width: 80 }} />
+                <th style={{ width: 120 }} />
               </tr>
             </thead>
             <tbody>
@@ -407,10 +716,14 @@ export default function ComprasPage() {
                   <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}><ClientDate value={o.fecha_entrega_esperada} fallback="Pendiente" /></td>
                   <td>
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                      <button type="button" className="btn-icon btn-icon-sm" onClick={() => setDetalle(o)}><Eye size={12} /></button>
-                      {(o.estado === 'orden' || o.estado === 'cotizacion') && (
-                        <button type="button" className="btn-icon btn-icon-sm" style={{ color: 'var(--success)' }} onClick={() => marcarRecibida(o)}><Check size={12} /></button>
+                      <button type="button" className="btn-icon btn-icon-sm" title="Ver detalle" onClick={() => setDetalle(o)}><Eye size={12} /></button>
+                      {o.estado !== 'recibida' && (
+                        <button type="button" className="btn-icon btn-icon-sm" title="Editar orden" onClick={() => setEditando(o)}><Pencil size={12} /></button>
                       )}
+                      {(o.estado === 'orden' || o.estado === 'cotizacion') && (
+                        <button type="button" className="btn-icon btn-icon-sm" style={{ color: 'var(--success)' }} title="Recibir orden" onClick={() => marcarRecibida(o)}><Check size={12} /></button>
+                      )}
+                      <button type="button" className="btn-icon btn-icon-sm" style={{ color: 'var(--danger)' }} title="Eliminar orden" onClick={() => eliminarOrden(o)}><Trash2 size={12} /></button>
                     </div>
                   </td>
                 </tr>
@@ -422,17 +735,40 @@ export default function ComprasPage() {
 
       {showNueva && <NuevaOrdenModal tasaIva={tasaIva} onClose={() => setShowNueva(false)} onSaved={() => { setShowNueva(false); fetchOrdenes(); }} />}
 
+      {editando && <EditarOrdenModal orden={editando} tasaIva={tasaIva} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); fetchOrdenes(); }} />}
+
       {detalle && (
         <Modal open onClose={() => setDetalle(null)} title={`Orden ${detalle.numero}`} subtitle={detalle.proveedor?.nombre} size="md">
-          <div className="modal-form">
-            <div className="modal-info-row"><span className="muted">Estado</span><strong>{ESTADOS[detalle.estado as keyof typeof ESTADOS]?.label}</strong></div>
-            <div className="modal-info-row"><span className="muted">Total</span><strong>${detalle.total.toLocaleString()}</strong></div>
+          <div className="modal-form" style={{ gap: 14 }}>
+            <div className="modal-info-row"><span className="muted">Estado</span><span className={`badge ${ESTADOS[detalle.estado as keyof typeof ESTADOS]?.class}`}>{ESTADOS[detalle.estado as keyof typeof ESTADOS]?.label}</span></div>
+            <div className="modal-info-row"><span className="muted">Método de pago</span><strong>{detalle.metodo_pago ? detalle.metodo_pago.toUpperCase() : 'EFECTIVO'}</strong></div>
+            <div className="modal-info-row"><span className="muted">Condición</span><strong>{detalle.es_credito ? 'CRÉDITO' : 'CONTADO'}</strong></div>
+            <div className="modal-info-row"><span className="muted">Emisión</span><strong><ClientDate value={detalle.created_at} /></strong></div>
+            <div className="modal-info-row"><span className="muted">Entrega esperada</span><strong><ClientDate value={detalle.fecha_entrega_esperada} fallback="Pendiente" /></strong></div>
+            
+            <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+            
+            <h4 style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 2px' }}>Productos</h4>
             {detalle.items_orden_compra?.map((it, i) => (
-              <div key={i} className="modal-info-row">
-                <span>{it.producto?.nombre ?? 'Producto'}</span>
-                <strong>{it.cantidad} × ${it.subtotal.toLocaleString()}</strong>
+              <div key={i} className="modal-info-row" style={{ paddingLeft: 8 }}>
+                <span style={{ fontSize: 13 }}>{it.producto?.codigo ? `[${it.producto.codigo}] ` : ''}{it.producto?.nombre ?? 'Producto'}</span>
+                <strong>{it.cantidad} × ${it.precio_unitario?.toLocaleString() ?? 0} = ${it.subtotal.toLocaleString()}</strong>
               </div>
             ))}
+            
+            <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+            
+            <div className="modal-info-row modal-info-row--success">
+              <span className="muted">Total orden</span>
+              <strong>${detalle.total.toLocaleString()}</strong>
+            </div>
+
+            {detalle.notas && (
+              <div style={{ background: 'var(--bg-subtle)', padding: 12, borderRadius: 8, fontSize: 12, marginTop: 4 }}>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>Notas:</div>
+                <div style={{ color: 'var(--text-secondary)' }}>{detalle.notas}</div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

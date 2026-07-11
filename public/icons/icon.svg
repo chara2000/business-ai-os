@@ -1,6 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="112" fill="#C8F542"/>
-  <rect x="32" y="32" width="448" height="448" rx="96" fill="#1A1A1A"/>
-  <path d="M148 340V172h72c44 0 76 28 76 72s-32 72-76 72h-36v24h-36zm36-60h32c22 0 36-12 36-32s-14-32-36-32h-32v64z" fill="#C8F542"/>
-  <circle cx="340" cy="256" r="52" stroke="#C8F542" stroke-width="28"/>
+  <rect width="512" height="512" rx="128" fill="#121827"/>
+  <!-- Glowing subtle radial gradient -->
+  <circle cx="256" cy="256" r="160" fill="url(#glow)" opacity="0.2"/>
+  <!-- Minimalist Geometric Star (Business OS style) -->
+  <g transform="translate(186, 186)">
+    <path d="M70 0 C70 45 95 70 140 70 C95 70 70 95 70 140 C70 95 45 70 0 70 C45 70 70 45 70 0 Z" fill="url(#brandGrad)"/>
+  </g>
+  <!-- Sleek outer thin border accent -->
+  <rect x="16" y="16" width="480" height="480" rx="112" stroke="#C8F542" stroke-width="8" stroke-opacity="0.15"/>
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C8F542"/>
+      <stop offset="100%" stop-color="#A3E635"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="256" cy="256" r="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C8F542"/>
+      <stop offset="100%" stop-color="#A3E635" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
 </svg>

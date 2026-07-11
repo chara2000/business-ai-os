@@ -1,20 +1,19 @@
 /* ═══════════════════════════════════════════════════════════════
    V8 FINTECH — Lime #C8F542 unified
 ═══════════════════════════════════════════════════════════════ */
-
-/* ── Sidebar unificado ── */
 .sidebar-unified {
   position: fixed;
   top: 0; left: 0;
   z-index: 50;
   height: 100dvh;
-  width: var(--sidebar-w);
+  width: var(--sidebar-current-w, var(--sidebar-w));
   display: flex;
   flex-direction: column;
   background: var(--bg-sidebar);
   backdrop-filter: blur(20px);
   border-right: 1px solid var(--border-default);
   box-shadow: 2px 0 24px rgba(0,0,0,0.04);
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-unified-head { padding: 20px 16px 12px; }
@@ -60,6 +59,7 @@
   border: 1px solid var(--border-default);
   background: var(--bg-subtle);
 }
+
 .sidebar-search input {
   flex: 1; border: none; background: transparent;
   font-size: 13px; font-weight: 500; outline: none; color: var(--text-primary);
