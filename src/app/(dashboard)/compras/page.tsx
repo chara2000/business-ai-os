@@ -332,7 +332,7 @@ export default function ComprasPage() {
 
   return (
     <ModuleShell
-      boundedTable
+      boundedTable={false}
       stats={moduleStats}
       toolbar={
         <>

@@ -396,7 +396,7 @@ export default function VentasPage() {
 
   return (
     <ModuleShell
-      boundedTable
+      boundedTable={false}
       stats={moduleStats}
       toolbar={
         <>
