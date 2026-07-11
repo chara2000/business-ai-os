@@ -300,9 +300,11 @@ function EditarOrdenModal({ orden, onClose, onSaved, tasaIva }: { orden: Orden; 
     })) || []
   );
   const [loading, setLoading] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   useEffect(() => {
     if (!empresaId) return;
+    // Load dropdowns
     Promise.all([
       supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true),
       supabase.from('productos').select('id, nombre, codigo, precio_costo').eq('empresa_id', empresaId).eq('activo', true),
@@ -310,7 +312,27 @@ function EditarOrdenModal({ orden, onClose, onSaved, tasaIva }: { orden: Orden; 
       setProveedores(p.data ?? []);
       setProductos(pr.data ?? []);
     });
-  }, [empresaId]);
+
+    // Always re-fetch items directly in case the parent query returned an empty array due to RLS
+    if (orden.id) {
+      setLoadingItems(true);
+      supabase
+        .from('items_orden_compra')
+        .select('id, producto_id, cantidad, precio_unitario, subtotal')
+        .eq('orden_compra_id', orden.id)
+        .then(({ data: fetchedItems }) => {
+          if (fetchedItems && fetchedItems.length > 0) {
+            setItems(fetchedItems.map((it) => ({
+              producto_id: it.producto_id,
+              cantidad: it.cantidad,
+              precio: it.precio_unitario,
+              subtotal: it.subtotal,
+            })));
+          }
+          setLoadingItems(false);
+        });
+    }
+  }, [empresaId, orden.id]);
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
   const { impuestos, total } = calcImpuestos(subtotal, 0, tasaIva);
@@ -496,22 +518,30 @@ function EditarOrdenModal({ orden, onClose, onSaved, tasaIva }: { orden: Orden; 
             )}
           </div>
           <div className="modal-line-list">
-            {items.map((item, idx) => (
-              <div key={idx} className="modal-line-row">
-                <select className="select" value={item.producto_id} onChange={(e) => updateItem(idx, e.target.value)} required disabled={orden.estado === 'recibida'} style={{ flex: 2 }}>
-                  <option value="">Producto</option>
-                  {productos.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
-                </select>
-                <input type="number" className="input" placeholder="Cant." min={1} value={item.cantidad} onChange={(e) => updateCantidad(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 80 }} />
-                <input type="number" className="input" placeholder="Costo" min={0} value={item.precio} onChange={(e) => updatePrecio(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 120 }} />
-                <div className="line-subtotal" style={{ width: 100, textAlign: 'right' }}>${item.subtotal.toLocaleString()}</div>
-                {items.length > 1 && orden.estado !== 'recibida' && (
-                  <button type="button" className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setItems((it) => it.filter((_, i) => i !== idx))}>
-                    <Trash2 size={14} />
-                  </button>
-                )}
+            {loadingItems ? (
+              <div style={{ padding: '12px 0', color: 'var(--text-muted)', fontSize: 13 }}>Cargando productos...</div>
+            ) : items.length === 0 ? (
+              <div style={{ padding: '12px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                No hay productos en esta orden. Agrega uno con el botón de arriba.
               </div>
-            ))}
+            ) : (
+              items.map((item, idx) => (
+                <div key={idx} className="modal-line-row">
+                  <select className="select" value={item.producto_id} onChange={(e) => updateItem(idx, e.target.value)} required disabled={orden.estado === 'recibida'} style={{ flex: 2 }}>
+                    <option value="">Producto</option>
+                    {productos.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
+                  </select>
+                  <input type="number" className="input" placeholder="Cant." min={1} value={item.cantidad} onChange={(e) => updateCantidad(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 80 }} />
+                  <input type="number" className="input" placeholder="Costo" min={0} value={item.precio} onChange={(e) => updatePrecio(idx, +e.target.value)} disabled={orden.estado === 'recibida'} style={{ width: 120 }} />
+                  <div className="line-subtotal" style={{ width: 100, textAlign: 'right' }}>${item.subtotal.toLocaleString()}</div>
+                  {items.length > 1 && orden.estado !== 'recibida' && (
+                    <button type="button" className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => setItems((it) => it.filter((_, i) => i !== idx))}>
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
           <div className="modal-info-row" style={{ marginTop: 12 }}>
             <span className="muted">Subtotal</span>
@@ -735,43 +765,94 @@ export default function ComprasPage() {
 
       {showNueva && <NuevaOrdenModal tasaIva={tasaIva} onClose={() => setShowNueva(false)} onSaved={() => { setShowNueva(false); fetchOrdenes(); }} />}
 
+
       {editando && <EditarOrdenModal orden={editando} tasaIva={tasaIva} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); fetchOrdenes(); }} />}
 
-      {detalle && (
-        <Modal open onClose={() => setDetalle(null)} title={`Orden ${detalle.numero}`} subtitle={detalle.proveedor?.nombre} size="md">
-          <div className="modal-form" style={{ gap: 14 }}>
-            <div className="modal-info-row"><span className="muted">Estado</span><span className={`badge ${ESTADOS[detalle.estado as keyof typeof ESTADOS]?.class}`}>{ESTADOS[detalle.estado as keyof typeof ESTADOS]?.label}</span></div>
-            <div className="modal-info-row"><span className="muted">Método de pago</span><strong>{detalle.metodo_pago ? detalle.metodo_pago.toUpperCase() : 'EFECTIVO'}</strong></div>
-            <div className="modal-info-row"><span className="muted">Condición</span><strong>{detalle.es_credito ? 'CRÉDITO' : 'CONTADO'}</strong></div>
-            <div className="modal-info-row"><span className="muted">Emisión</span><strong><ClientDate value={detalle.created_at} /></strong></div>
-            <div className="modal-info-row"><span className="muted">Entrega esperada</span><strong><ClientDate value={detalle.fecha_entrega_esperada} fallback="Pendiente" /></strong></div>
-            
-            <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
-            
-            <h4 style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 2px' }}>Productos</h4>
-            {detalle.items_orden_compra?.map((it, i) => (
+      {detalle && <DetalleOrdenModal orden={detalle} onClose={() => setDetalle(null)} />
+      }
+    </ModuleShell>
+  );
+}
+
+
+function DetalleOrdenModal({ orden, onClose }: { orden: Orden; onClose: () => void }) {
+  type RawItem = {
+    id: string;
+    producto_id: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+    // PostgREST returns the joined relation as an array
+    producto: { nombre: string; codigo: string }[] | { nombre: string; codigo: string } | null;
+  };
+
+  const [items, setItems] = useState<RawItem[]>(
+    (orden.items_orden_compra ?? []) as unknown as RawItem[]
+  );
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  useEffect(() => {
+    if (!orden.id) return;
+    setLoadingItems(true);
+    supabase
+      .from('items_orden_compra')
+      .select('id, producto_id, cantidad, precio_unitario, subtotal, producto:productos(nombre, codigo)')
+      .eq('orden_compra_id', orden.id)
+      .then(({ data }) => {
+        if (data) setItems(data as unknown as RawItem[]);
+        setLoadingItems(false);
+      });
+  }, [orden.id]);
+
+  // Normalize producto field (PostgREST may return it as array or object)
+  const getProducto = (it: RawItem) => {
+    if (!it.producto) return null;
+    if (Array.isArray(it.producto)) return it.producto[0] ?? null;
+    return it.producto;
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Orden ${orden.numero}`} subtitle={orden.proveedor?.nombre} size="md">
+      <div className="modal-form" style={{ gap: 14 }}>
+        <div className="modal-info-row"><span className="muted">Estado</span><span className={`badge ${ESTADOS[orden.estado as keyof typeof ESTADOS]?.class}`}>{ESTADOS[orden.estado as keyof typeof ESTADOS]?.label}</span></div>
+        <div className="modal-info-row"><span className="muted">Método de pago</span><strong>{orden.metodo_pago ? orden.metodo_pago.toUpperCase() : 'EFECTIVO'}</strong></div>
+        <div className="modal-info-row"><span className="muted">Condición</span><strong>{orden.es_credito ? 'CRÉDITO' : 'CONTADO'}</strong></div>
+        <div className="modal-info-row"><span className="muted">Emisión</span><strong><ClientDate value={orden.created_at} /></strong></div>
+        <div className="modal-info-row"><span className="muted">Entrega esperada</span><strong><ClientDate value={orden.fecha_entrega_esperada} fallback="Pendiente" /></strong></div>
+        
+        <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+        
+        <h4 style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 2px' }}>Productos</h4>
+        {loadingItems ? (
+          <div style={{ padding: '8px 0', color: 'var(--text-muted)', fontSize: 13 }}>Cargando productos...</div>
+        ) : !items || items.length === 0 ? (
+          <div style={{ padding: '8px 0', color: 'var(--text-muted)', fontSize: 13 }}>Sin productos registrados en esta orden.</div>
+        ) : (
+          items.map((it, i) => {
+            const prod = getProducto(it);
+            return (
               <div key={i} className="modal-info-row" style={{ paddingLeft: 8 }}>
-                <span style={{ fontSize: 13 }}>{it.producto?.codigo ? `[${it.producto.codigo}] ` : ''}{it.producto?.nombre ?? 'Producto'}</span>
+                <span style={{ fontSize: 13 }}>{prod?.codigo ? `[${prod.codigo}] ` : ''}{prod?.nombre ?? 'Producto'}</span>
                 <strong>{it.cantidad} × ${it.precio_unitario?.toLocaleString() ?? 0} = ${it.subtotal.toLocaleString()}</strong>
               </div>
-            ))}
-            
-            <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
-            
-            <div className="modal-info-row modal-info-row--success">
-              <span className="muted">Total orden</span>
-              <strong>${detalle.total.toLocaleString()}</strong>
-            </div>
+            );
+          })
+        )}
+        
+        <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+        
+        <div className="modal-info-row modal-info-row--success">
+          <span className="muted">Total orden</span>
+          <strong>${orden.total.toLocaleString()}</strong>
+        </div>
 
-            {detalle.notas && (
-              <div style={{ background: 'var(--bg-subtle)', padding: 12, borderRadius: 8, fontSize: 12, marginTop: 4 }}>
-                <div style={{ fontWeight: 600, marginBottom: 2 }}>Notas:</div>
-                <div style={{ color: 'var(--text-secondary)' }}>{detalle.notas}</div>
-              </div>
-            )}
+        {orden.notas && (
+          <div style={{ background: 'var(--bg-subtle)', padding: 12, borderRadius: 8, fontSize: 12, marginTop: 4 }}>
+            <div style={{ fontWeight: 600, marginBottom: 2 }}>Notas:</div>
+            <div style={{ color: 'var(--text-secondary)' }}>{orden.notas}</div>
           </div>
-        </Modal>
-      )}
-    </ModuleShell>
+        )}
+      </div>
+    </Modal>
   );
 }
