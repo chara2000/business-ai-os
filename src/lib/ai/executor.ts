@@ -396,6 +396,16 @@ export async function executeAIAction(
         if (datos.stock_actual != null) updates.stock_actual = Number(datos.stock_actual);
         if (datos.stock_minimo != null) updates.stock_minimo = Number(datos.stock_minimo);
 
+        if (datos.categoria) {
+          const catId = await findOrCreateCategoria(supabase, empresaId, String(datos.categoria).trim());
+          if (catId) updates.categoria_id = catId;
+        }
+
+        if (datos.marca) {
+          const marId = await findOrCreateMarca(supabase, empresaId, String(datos.marca).trim());
+          if (marId) updates.marca_id = marId;
+        }
+
         if (datos.cantidad != null) {
           const add = Number(datos.cantidad);
           const stockNuevo = producto.stock_actual + add;
