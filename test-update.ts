@@ -9,16 +9,16 @@ const supabase = createClient(
 );
 
 async function main() {
-  const prodId = '26ea5798-2c88-4dd6-a3b3-d8069c472533'; // Neumático
+  const prodId = 'f2857db0-f4de-4b76-9ef5-1a095d4173f6'; // direccionales de NKD 125
   console.log("Attempting to update product id:", prodId);
 
   const { data, error } = await supabase
     .from('productos')
     .update({
       stock_actual: 10,
-      precio_costo: 10000,
-      precio_venta: 28000,
-      margen: 64
+      precio_costo: 15000,
+      precio_venta: 25000,
+      margen: 40
     })
     .eq('id', prodId)
     .select();

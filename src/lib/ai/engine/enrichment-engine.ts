@@ -189,6 +189,41 @@ export async function enrichIntent(
     if (datos.cantidad != null) campos.push(field('cantidad', datos.cantidad, 'usuario', { required: true }));
     if (datos.proveedor) campos.push(field('proveedor', datos.proveedor, 'usuario', { required: true }));
     if (datos.precio_costo != null) campos.push(field('precio_costo', datos.precio_costo, 'usuario', { required: true }));
+    
+    // Enriquecer categoría
+    const hints = getKnowledgeHints(prod);
+    const memKey = `producto:${prod.toLowerCase()}`;
+    const keyword = prod.toLowerCase().split(/\s+/).find((w) => w.length > 3);
+    const keywordCat = keyword ? ctx.memory[`keyword:${keyword}:categoria`] : null;
+
+    let categoriaNombre = String(datos.categoria ?? '');
+    if (!categoriaNombre && ctx.memory[`${memKey}:categoria`]) {
+      categoriaNombre = ctx.memory[`${memKey}:categoria`];
+    }
+    if (!categoriaNombre && keywordCat) categoriaNombre = keywordCat;
+    if (!categoriaNombre && hints.categoria) categoriaNombre = hints.categoria;
+    const catMatch = matchByName(ctx.categorias, categoriaNombre);
+    if (catMatch) {
+      datos.categoria_id = catMatch.id;
+      datos.categoria = catMatch.nombre;
+      campos.push(field('categoria', catMatch.nombre, catMatch.nombre === hints.categoria ? 'inferido' : 'historial'));
+    } else if (categoriaNombre) {
+      datos.categoria = categoriaNombre;
+      campos.push(field('categoria', categoriaNombre, 'inferido'));
+    }
+
+    // Enriquecer marca
+    const marcaNombre = String(datos.marca ?? ctx.memory[`${memKey}:marca`] ?? hints.marca ?? '');
+    const marcaMatch = matchByName(ctx.marcas, marcaNombre);
+    if (marcaMatch) {
+      datos.marca_id = marcaMatch.id;
+      datos.marca = marcaMatch.nombre;
+      campos.push(field('marca', marcaMatch.nombre, marcaNombre ? 'historial' : 'inferido'));
+    } else if (marcaNombre) {
+      datos.marca = marcaNombre;
+      campos.push(field('marca', marcaNombre, hints.marca === marcaNombre ? 'inferido' : 'usuario'));
+    }
+
     datos.metodo_pago = datos.metodo_pago ?? (datos.es_credito ? 'credito' : 'efectivo');
     campos.push(field('metodo_pago', datos.metodo_pago, datos.es_credito ? 'usuario' : 'defecto'));
     datos.bodega = datos.bodega ?? 'Central';

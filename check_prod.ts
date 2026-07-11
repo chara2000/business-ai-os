@@ -9,23 +9,27 @@ const supabase = createClient(
 );
 
 async function main() {
-  const prodId = '26ea5798-2c88-4dd6-a3b3-d8069c472533'; // Neumático
-
-  const { data: movements, error: movErr } = await supabase
-    .from('movimientos_inventario')
+  const { data: cats, error: catErr } = await supabase
+    .from('categorias')
     .select('*')
-    .eq('producto_id', prodId);
+    .eq('empresa_id', 'bbae9d2f-04e4-4d25-b096-311101532225');
   
-  console.log('--- MOVEMENTS ---');
-  console.log(JSON.stringify(movements, null, 2));
+  if (catErr) {
+    console.error("Error fetching categories:", catErr);
+  } else {
+    console.log("Registered Categories:", JSON.stringify(cats, null, 2));
+  }
 
-  const { data: orderItems, error: itemErr } = await supabase
-    .from('items_orden_compra')
+  const { data: marcas, error: marcaErr } = await supabase
+    .from('marcas')
     .select('*')
-    .eq('producto_id', prodId);
+    .eq('empresa_id', 'bbae9d2f-04e4-4d25-b096-311101532225');
 
-  console.log('--- ORDER ITEMS ---');
-  console.log(JSON.stringify(orderItems, null, 2));
+  if (marcaErr) {
+    console.error("Error fetching brands:", marcaErr);
+  } else {
+    console.log("Registered Brands:", JSON.stringify(marcas, null, 2));
+  }
 }
 
 main();
