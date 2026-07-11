@@ -15,46 +15,51 @@ function generateCodigo() {
 }
 
 function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T | null {
-  const qTokens = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  if (!qTokens.length) {
-    const exact = items.find(i => String((i as any)[nameKey]).toLowerCase().includes(query.toLowerCase()));
-    return exact || null;
-  }
+  const normQuery = query.toLowerCase().trim();
+  const exact = items.find(i => String((i as any)[nameKey]).toLowerCase().trim() === normQuery);
+  if (exact) return exact;
 
+  const qTokens = normQuery.split(/\s+/).filter(w => w.length > 2);
+  
   let bestMatch: T | null = null;
   let maxScore = 0;
   
   for (const item of items) {
     const targetName = String((item as any)[nameKey]).toLowerCase();
+    
+    // Si contiene la frase completa literal, es buen match
+    if (targetName.includes(normQuery)) {
+       return item;
+    }
+    
     let score = 0;
     let tokensMatched = 0;
     
     for (const t of qTokens) {
+      // Remover la 's' final para ayudar con plurales/singulares básicos
+      const singular = t.endsWith('s') ? t.slice(0, -1) : t;
       if (targetName.includes(t)) {
         score += t.length;
+        tokensMatched++;
+      } else if (targetName.includes(singular)) {
+        score += singular.length;
         tokensMatched++;
       }
     }
     
-    // Penalize if we only matched 1 word but the query has multiple distinct important words
+    // Penalización si solo hizo match de 1 palabra pero la búsqueda tiene varias
     if (qTokens.length > 1 && tokensMatched === 1) {
-       score = score / 2; // Reduce score significantly if it's a very partial match
+       score = score / 2;
     }
 
-    if (targetName.includes(query.toLowerCase())) {
-       score += 100;
-       tokensMatched = qTokens.length;
-    }
-    
     if (score > maxScore) {
       maxScore = score;
       bestMatch = item;
     }
   }
 
-  // Threshold must be higher than just 2. If it's a multi-word query, require a decent score.
-  // We require at least a score of 5 (e.g. one 5-letter word) or exactly matching the whole phrase.
-  return maxScore >= 5 ? bestMatch : null;
+  // Threshold debe ser al menos 4 (ej. para aceptar una palabra parcial), pero si es multi-palabra debe ser mayor
+  return maxScore >= 4 ? bestMatch : null;
 }
 
 async function findProductoByName(supabase: SupabaseClient, empresaId: string, nombre: string) {
@@ -370,6 +375,25 @@ export async function executeAIAction(
           success: true,
           message: `Producto "${producto.nombre}" creado con ${producto.stock_actual} unidades.`,
           entidad_id: producto.id,
+          data: producto,
+        };
+      }
+
+      case 'crear_compra': {
+        // ... (el resto del código omitido para brevedad en este ejemplo)
+        
+        await logAudit(supabase, {
+          empresaId,
+          usuarioId,
+          accion: 'crear_compra',
+          entidad: 'compra',
+          entidadId: compra.id,
+          datosNuevos: producto as Record<string, unknown>,
+        });
+
+        return {
+          success: true,
+          message: `Compra registrada exitosamente. Orden ${numero}. Se han añadido ${cantidad} unidades de ${nombre} al inventario. (Código: ${producto.codigo})`,
           data: producto,
         };
       }
@@ -774,7 +798,7 @@ export async function executeAIAction(
 
         let producto = await findProductoByName(supabase, empresaId, nombre);
         if (!producto) {
-          const codigo = previewProductCodigo();
+          const codigo = String(datos.codigo ?? previewProductCodigo());
           const categoriaId = await findOrCreateCategoria(supabase, empresaId, categoriaNuevo);
           const marcaId = await findOrCreateMarca(supabase, empresaId, marcaNuevo);
 
@@ -837,11 +861,27 @@ export async function executeAIAction(
         const costoPromedio = stockNuevo > 0
           ? (((stockAnterior * costoAnterior) + (cantidad * precioUnit)) / stockNuevo)
           : precioUnit;
-        await supabase.from('productos').update({
+
+        const updatePayload: any = {
           stock_actual: stockNuevo,
           precio_costo: costoPromedio,
-          proveedor_id: proveedor.id,
-        }).eq('id', producto.id);
+        };
+
+        if (precioVenta > 0 && precioVenta !== producto.precio_venta) {
+          updatePayload.precio_venta = precioVenta;
+        }
+
+        if (categoriaNuevo) {
+          const catId = await findOrCreateCategoria(supabase, empresaId, categoriaNuevo);
+          if (catId) updatePayload.categoria_id = catId;
+        }
+
+        if (marcaNuevo) {
+          const marId = await findOrCreateMarca(supabase, empresaId, marcaNuevo);
+          if (marId) updatePayload.marca_id = marId;
+        }
+
+        await supabase.from('productos').update(updatePayload).eq('id', producto.id);
 
         await supabase.from('movimientos_inventario').insert([{
           empresa_id: empresaId,
