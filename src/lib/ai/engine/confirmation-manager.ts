@@ -14,6 +14,18 @@ export class ConfirmationManager {
       args.codigo = `PRD-${randomId}`;
     }
 
+    // Para crear_compra: inyectar codigo y precio_venta dentro de productos[0] tambien
+    // para que el executor pueda leerlos sin importar desde donde los pasa el LLM
+    if (toolName === 'crear_compra' && Array.isArray(args.productos) && args.productos.length > 0) {
+      const p0 = args.productos[0];
+      if (!p0.codigo) p0.codigo = args.codigo;
+      // Si precio_venta viene a nivel raiz, injectarlo en el producto tambien
+      if (!p0.precio_venta && args.precio_venta) p0.precio_venta = args.precio_venta;
+      // Lo mismo con categoria y marca
+      if (!p0.categoria && args.categoria) p0.categoria = args.categoria;
+      if (!p0.marca && args.marca) p0.marca = args.marca;
+    }
+
     const { entidad, camposRequeridos } = this.getSchemaRules(toolName);
     const pendingKeys: string[] = [];
     const campos: EnrichedField[] = [];

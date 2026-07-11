@@ -754,12 +754,13 @@ export async function executeAIAction(
         const proveedorNombre = String(datos.proveedor ?? '').trim();
         const cantidad = Number(primerProducto?.cantidad ?? datos.cantidad ?? 0);
         const precioUnit = Number(primerProducto?.costo_unitario ?? primerProducto?.precio_costo ?? datos.precio_costo ?? 0);
-        // Usar precio_venta del usuario. Si no viene en el producto, intentar datos.precio_venta.
-        // Solo calcular x1.3 si no hay ningún precio_venta especificado.
+        // precio_venta: buscar en producto, raiz, o calcular x1.3
         const precioVentaRaw = primerProducto?.precio_venta ?? datos.precio_venta ?? null;
         const precioVenta = precioVentaRaw ? Number(precioVentaRaw) : Math.round(precioUnit * 1.3);
         const categoriaNuevo = String(primerProducto?.categoria ?? datos.categoria ?? '').trim();
         const marcaNuevo = String(primerProducto?.marca ?? datos.marca ?? '').trim();
+        // codigo: buscar en producto, raiz
+        const codigoParam = String(primerProducto?.codigo ?? datos.codigo ?? '').trim() || null;
 
         const metodoPago = String(datos.metodo_pago ?? (datos.es_credito ? 'credito' : 'efectivo'));
         const esCredito = Boolean(datos.es_credito) || metodoPago === 'credito';
@@ -782,7 +783,7 @@ export async function executeAIAction(
 
         let producto = await findProductoByName(supabase, empresaId, nombre);
         if (!producto) {
-          const codigo = String(datos.codigo ?? previewProductCodigo());
+          const codigo = codigoParam ?? previewProductCodigo();
           const categoriaId = await findOrCreateCategoria(supabase, empresaId, categoriaNuevo);
           const marcaId = await findOrCreateMarca(supabase, empresaId, marcaNuevo);
 
@@ -867,7 +868,10 @@ export async function executeAIAction(
           if (marId) updatePayload.marca_id = marId;
         }
 
-        await supabase.from('productos').update(updatePayload).eq('id', producto.id);
+        const { error: updateError } = await supabase.from('productos').update(updatePayload).eq('id', producto.id);
+        if (updateError) {
+          return { success: false, message: `Error actualizando producto: ${updateError.message}` };
+        }
 
         await supabase.from('movimientos_inventario').insert([{
           empresa_id: empresaId,
