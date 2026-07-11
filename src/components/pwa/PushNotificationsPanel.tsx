@@ -58,6 +58,7 @@ export function PushNotificationsPanel() {
 
       setEnabled(true);
       toast.success('Notificaciones push activadas');
+      await fetch('/api/notificaciones', { method: 'PATCH' }).catch(() => null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al activar push';
       toast.error(msg);

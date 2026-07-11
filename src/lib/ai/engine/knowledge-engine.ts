@@ -4,7 +4,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'Eléctrico': [
     'bombilla', 'bombillo', 'foco', 'lámpara', 'lampara', 'cable', 'thhn', 'interruptor',
     'tomacorriente', 'breaker', 'fusible', 'led', 'fluorescente', 'iluminación', 'iluminacion',
-    'ax100', 'tubo led',
+    'ax100', 'tubo led', 'batería', 'bateria', 'baterías', 'baterias',
   ],
   'Iluminación': ['spot', 'panel led', 'downlight', 'reflector'],
   'Herramientas': [
@@ -16,6 +16,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     'cañería', 'caneria', 'empaque', 'teflón',
   ],
   'Pinturas': ['pintura', 'brocha', 'rodillo', 'thinner', 'esmalte', 'latex', 'barniz'],
+  Automotriz: ['llanta', 'llantas', 'neumático', 'neumatico', 'rin', 'rines', 'filtro de aceite', 'bujía', 'bujia'],
   'Ferretería general': ['tornillo', 'clavo', 'perno', 'tuerca', 'arandela', 'bisagra', 'cerradura'],
   'Construcción': ['cemento', 'arena', 'ladrillo', 'bloque', 'varilla', 'malla', 'alambre'],
 };
@@ -74,12 +75,26 @@ export function normalizeFieldKey(input: string): string | null {
   return FIELD_SYNONYMS[key] ?? (FIELD_LABELS[key] ? key : null);
 }
 
+const KNOWN_BRANDS = ['bosch', 'suzuki', 'dewalt', 'stanley', 'black+decker', 'makita', 'truper', 'pretul', 'disco'];
+
+export function inferMarcaFromText(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const brand of KNOWN_BRANDS) {
+    if (lower.includes(brand)) {
+      return brand.charAt(0).toUpperCase() + brand.slice(1).replace('+', '+');
+    }
+  }
+  return null;
+}
+
 export function getKnowledgeHints(productName: string): {
   categoria?: string;
   unidad?: string;
+  marca?: string;
 } {
   return {
     categoria: inferCategoryFromText(productName) ?? undefined,
     unidad: inferUnitFromText(productName),
+    marca: inferMarcaFromText(productName) ?? undefined,
   };
 }

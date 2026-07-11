@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 export function LoginDecorations() {
   return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+    <div className="login-decorations" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       <motion.div
         className="login-deco-ring"
         style={{ width: 420, height: 420, top: '-8%', right: '-5%', borderWidth: 1 }}

@@ -3,20 +3,39 @@ import { GoogleGenerativeAI, type Content } from '@google/generative-ai';
 
 export type AIProviderName = 'gemini' | 'openai';
 
+export type ToolCall = {
+  id: string;
+  name: string;
+  arguments: string; // JSON string representation
+};
+
 export type ChatMessage = {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+};
+
+export type AITool = {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>; // JSON Schema
+  };
 };
 
 export type ChatCompletionResult = {
   text: string;
   provider: AIProviderName;
   model: string;
+  toolCalls?: ToolCall[];
   usage?: unknown;
 };
 
+const DEFAULT_PROVIDER = process.env.AI_PROVIDER || 'openai';
+const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
-const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
 
 export function resolveAIProvider(): AIProviderName {
   const explicit = process.env.AI_PROVIDER?.toLowerCase();
@@ -103,6 +122,7 @@ export async function aiChatCompletion(params: {
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
+  tools?: AITool[];
 }): Promise<ChatCompletionResult> {
   const provider = resolveAIProvider();
   assertProviderReady(provider);
@@ -113,29 +133,44 @@ export async function aiChatCompletion(params: {
       model: DEFAULT_OPENAI_MODEL,
       messages: [
         { role: 'system', content: params.systemPrompt },
-        ...params.messages
-          .filter((m) => m.role !== 'system')
-          .map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
+        ...params.messages.filter((m) => m.role !== 'system').map((m) => {
+          if (m.role === 'tool') return { role: 'tool' as const, content: m.content, tool_call_id: m.tool_call_id! };
+          if (m.role === 'assistant' && m.tool_calls) {
+            return { role: 'assistant' as const, content: m.content || null, tool_calls: m.tool_calls.map(t => ({ id: t.id, type: 'function' as const, function: { name: t.name, arguments: t.arguments } })) };
+          }
+          return { role: m.role as 'user' | 'assistant', content: m.content };
+        }),
       ],
+      tools: params.tools?.length ? params.tools : undefined,
       max_tokens: params.maxTokens ?? 1024,
       temperature: params.temperature ?? 0.7,
     });
 
+    const msg = completion.choices[0]?.message;
+    const toolCalls = msg?.tool_calls?.map((tc: any) => ({
+      id: tc.id,
+      name: tc.function.name,
+      arguments: tc.function.arguments,
+    }));
+
     return {
-      text: completion.choices[0]?.message?.content ?? '',
+      text: msg?.content ?? '',
       provider,
       model: DEFAULT_OPENAI_MODEL,
+      toolCalls,
       usage: completion.usage,
     };
   }
 
   const genAI = getGemini();
+  const toolsParam = params.tools?.length
+    ? [{ functionDeclarations: params.tools.map(t => ({ name: t.function.name, description: t.function.description, parameters: t.function.parameters as any })) }]
+    : undefined;
+
   const model = genAI.getGenerativeModel({
     model: DEFAULT_GEMINI_MODEL,
     systemInstruction: params.systemPrompt,
+    tools: toolsParam,
     generationConfig: {
       maxOutputTokens: params.maxTokens ?? 1024,
       temperature: params.temperature ?? 0.7,
@@ -143,28 +178,38 @@ export async function aiChatCompletion(params: {
   });
 
   const { history, userText } = buildGeminiHistory(params.messages);
-  if (!userText) {
-    throw new Error('Se requiere al menos un mensaje de usuario');
+  if (!userText && history.length === 0) {
+    throw new Error('Se requiere al menos un mensaje de usuario o historial');
   }
 
-  let text: string;
+  let text = '';
+  let toolCalls: ToolCall[] | undefined;
   let usage: unknown;
 
   if (history.length === 0) {
     const result = await model.generateContent(userText);
-    text = result.response.text();
+    text = result.response.text() || '';
     usage = result.response.usageMetadata;
+    const calls = result.response.functionCalls();
+    if (calls && calls.length > 0) {
+      toolCalls = calls.map((c, i) => ({ id: `call_${i}`, name: c.name, arguments: JSON.stringify(c.args) }));
+    }
   } else {
     const chat = model.startChat({ history });
-    const result = await chat.sendMessage(userText);
-    text = result.response.text();
+    const result = await chat.sendMessage(userText || [{ text: '' }]);
+    text = result.response.text() || '';
     usage = result.response.usageMetadata;
+    const calls = result.response.functionCalls();
+    if (calls && calls.length > 0) {
+      toolCalls = calls.map((c, i) => ({ id: `call_${i}`, name: c.name, arguments: JSON.stringify(c.args) }));
+    }
   }
 
   return {
     text,
     provider,
     model: DEFAULT_GEMINI_MODEL,
+    toolCalls,
     usage,
   };
 }
@@ -266,33 +311,75 @@ function mimeFromFilename(filename: string): string {
   return 'audio/ogg';
 }
 
-export async function aiTranscribeAudio(buffer: ArrayBuffer, filename = 'audio.ogg'): Promise<string> {
+export async function aiTranscribeAudio(
+  buffer: ArrayBuffer, 
+  filename = 'audio.ogg',
+  contextPrompt?: string
+): Promise<string> {
   const provider = resolveAIProvider();
   assertProviderReady(provider);
 
-  if (provider === 'openai') {
+  const mimeType = mimeFromFilename(filename);
+  const transcribeWithOpenAI = async () => {
     const openai = getOpenAI();
-    const file = new File([buffer], filename, { type: mimeFromFilename(filename) });
+    const file = new File([buffer], filename, { type: mimeType });
     const result = await openai.audio.transcriptions.create({
       file,
       model: 'whisper-1',
       language: 'es',
+      // Inyectamos el contexto del negocio para mejorar drásticamente la transcripción
+      ...(contextPrompt ? { prompt: contextPrompt } : {}),
     });
     return result.text?.trim() ?? '';
+  };
+
+  if (provider === 'openai') {
+    return transcribeWithOpenAI();
   }
 
-  const mimeType = mimeFromFilename(filename);
-  const base64 = Buffer.from(buffer).toString('base64');
-  const genAI = getGemini();
-  const model = genAI.getGenerativeModel({
-    model: DEFAULT_GEMINI_MODEL,
-    systemInstruction: 'Transcribe el audio al español. Devuelve SOLO el texto transcrito, sin comentarios.',
-  });
+  try {
+    const base64 = Buffer.from(buffer).toString('base64');
+    const genAI = getGemini();
+    const model = genAI.getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
+      systemInstruction: 'Transcribe el audio al español. Devuelve SOLO el texto transcrito, sin comentarios.',
+    });
 
-  const result = await model.generateContent([
-    { text: 'Transcribe este audio en español:' },
-    { inlineData: { mimeType, data: base64 } },
-  ]);
+    const result = await model.generateContent([
+      { text: 'Transcribe este audio en español:' },
+      { inlineData: { mimeType, data: base64 } },
+    ]);
 
-  return result.response.text().trim();
+    const text = result.response.text().trim();
+    if (text) return text;
+  } catch (error) {
+    console.error('[AI audio Gemini]', error);
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      return await transcribeWithOpenAI();
+    } catch (error) {
+      console.error('[AI audio OpenAI fallback]', error);
+    }
+  }
+
+  throw new Error('No se pudo transcribir el audio');
+}
+
+export async function aiGetEmbedding(text: string): Promise<number[] | null> {
+  const provider = resolveAIProvider();
+  if (provider !== 'openai') return null;
+  assertProviderReady(provider);
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+    return response.data[0].embedding;
+  } catch (err) {
+    console.error('[AI] Error generando embedding:', err);
+    return null;
+  }
 }

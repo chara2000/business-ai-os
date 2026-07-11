@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: secret,
-      allowed_updates: ['message'],
+      allowed_updates: ['message', 'callback_query'],
     }),
   });
 

@@ -11,6 +11,7 @@ import { useAppStore } from '@/stores/appStore';
 import { Modal } from '@/components/ui/Modal';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { CredentialsPanel } from '@/components/ui/CredentialsPanel';
+import { TablePanel } from '@/components/ui/TablePanel';
 import { ROLE_LABELS } from '@/lib/roles';
 import type { Empresa, BusinessType } from '@/types';
 import {
@@ -45,6 +46,8 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [showCredentials, setShowCredentials] = useState(false);
   const [credentialEmpresa, setCredentialEmpresa] = useState<Empresa | null>(null);
   const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
@@ -190,6 +193,9 @@ export default function SuperAdminPage() {
     e.tipo_negocio.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const getCount = (arr?: [{ count: number }]) => arr?.[0]?.count ?? 0;
 
   if (!isSuperAdmin) return null;
@@ -337,7 +343,7 @@ export default function SuperAdminPage() {
       </div>
 
       {/* Table */}
-      <div className="table-wrapper">
+      <TablePanel className="table-wrapper" padded={false} pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
         <table className="table">
           <thead>
             <tr>
@@ -357,7 +363,7 @@ export default function SuperAdminPage() {
               <tr><td colSpan={9} className="table-empty">Cargando establecimientos...</td></tr>
             ) : filtered.length === 0 ? (
               <tr><td colSpan={9} className="table-empty">No hay establecimientos</td></tr>
-            ) : filtered.map((emp) => (
+            ) : paginated.map((emp) => (
               <tr key={emp.id}>
                 <td>
                   <div className="table-cell-entity">
@@ -397,7 +403,7 @@ export default function SuperAdminPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablePanel>
 
       {/* Create Modal */}
       <Modal

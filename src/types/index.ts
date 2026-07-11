@@ -27,6 +27,8 @@ export type MovementType = 'entrada' | 'salida' | 'ajuste' | 'transferencia';
 
 export type ReturnStatus = 'devuelto_inventario' | 'garantia' | 'proveedor' | 'perdida';
 
+export type SupplierPayableStatus = CreditStatus;
+
 // ============================================
 // DATABASE ENTITIES
 // ============================================
@@ -222,6 +224,7 @@ export interface Venta {
   // Relations
   cliente?: Cliente;
   items?: ItemVenta[];
+  items_venta?: ItemVenta[];
 }
 
 export interface ItemVenta {
@@ -266,6 +269,17 @@ export interface Abono {
   created_at: string;
 }
 
+export interface AbonoProveedor {
+  id: string;
+  empresa_id: string;
+  cuenta_por_pagar_id: string;
+  monto: number;
+  metodo_pago: string;
+  notas?: string;
+  usuario_id?: string;
+  created_at: string;
+}
+
 export interface Gasto {
   id: string;
   empresa_id: string;
@@ -279,6 +293,22 @@ export interface Gasto {
   notas?: string;
   usuario_id: string;
   created_at: string;
+}
+
+export interface CuentaPorPagarProveedor {
+  id: string;
+  empresa_id: string;
+  proveedor_id: string;
+  orden_compra_id?: string;
+  monto_total: number;
+  monto_pagado: number;
+  saldo_pendiente: number;
+  estado: SupplierPayableStatus;
+  fecha_vencimiento: string;
+  notas?: string;
+  created_at: string;
+  updated_at: string;
+  proveedor?: Proveedor;
 }
 
 export interface Devolucion {

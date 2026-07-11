@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { resolveServerEmpresaId } from '@/lib/server/empresa-context';
 import { fetchAppNotifications } from '@/lib/notifications/alerts';
+import { sendWebPush } from '@/lib/notifications/web-push';
 
 export async function GET() {
   const ctx = await resolveServerEmpresaId();
@@ -52,7 +53,70 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  try {
+    await sendWebPush(
+      { endpoint, p256dh: keys.p256dh, auth: keys.auth },
+      {
+        title: 'Business AI OS',
+        body: 'Notificaciones push activadas correctamente',
+        url: '/configuracion',
+      },
+    );
+  } catch {
+    // La suscripción quedó guardada aunque el push de bienvenida falle
+  }
+
   return NextResponse.json({ success: true });
+}
+
+/** Envía una notificación de prueba a las suscripciones del usuario actual */
+export async function PATCH() {
+  const ctx = await resolveServerEmpresaId();
+  if (!ctx) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    return NextResponse.json({ error: 'VAPID no configurado en el servidor' }, { status: 503 });
+  }
+
+  const supabase = await createClient();
+  const { data: subs, error } = await supabase
+    .from('push_subscriptions')
+    .select('endpoint, p256dh, auth')
+    .eq('usuario_id', ctx.usuario.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!subs?.length) {
+    return NextResponse.json({ error: 'No hay suscripciones push activas' }, { status: 404 });
+  }
+
+  let sent = 0;
+  const stale: string[] = [];
+
+  for (const sub of subs) {
+    try {
+      await sendWebPush(sub, {
+        title: 'Prueba de notificación',
+        body: 'Si ves esto, las alertas push están funcionando.',
+        url: '/dashboard',
+      });
+      sent += 1;
+    } catch (err) {
+      const status = err && typeof err === 'object' && 'statusCode' in err
+        ? (err as { statusCode?: number }).statusCode
+        : 0;
+      if (status === 404 || status === 410) stale.push(sub.endpoint);
+    }
+  }
+
+  if (stale.length) {
+    await supabase.from('push_subscriptions').delete().in('endpoint', stale);
+  }
+
+  return NextResponse.json({ success: true, sent, removed: stale.length });
 }
 
 export async function DELETE(req: NextRequest) {

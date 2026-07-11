@@ -14,9 +14,11 @@ import { calcImpuestos, getTasaIva, formatTasaIva } from '@/lib/tax';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { Modal } from '@/components/ui/Modal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import { InvoiceScanModal } from '@/components/ocr/InvoiceScanModal';
 import type { ParsedInvoice } from '@/lib/ocr/parse-invoice';
 
@@ -252,6 +254,8 @@ export default function ComprasPage() {
   const [search, setSearch] = useState('');
   const [showNueva, setShowNueva] = useState(false);
   const [detalle, setDetalle] = useState<Orden | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchOrdenes = useCallback(async () => {
     if (!empresaId) return;
@@ -273,6 +277,11 @@ export default function ComprasPage() {
     o.numero?.toLowerCase().includes(search.toLowerCase()) ||
     o.proveedor?.nombre?.toLowerCase().includes(search.toLowerCase()),
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   const FLUJO = ['solicitud', 'cotizacion', 'orden', 'recibida'];
 
@@ -369,7 +378,7 @@ export default function ComprasPage() {
           )}
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -383,7 +392,7 @@ export default function ComprasPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((o) => (
+              {paginated.map((o) => (
                 <tr key={o.id}>
                   <td><span style={{ fontWeight: 700, color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{o.numero}</span></td>
                   <td>
@@ -394,8 +403,8 @@ export default function ComprasPage() {
                   </td>
                   <td><span className={`badge ${ESTADOS[o.estado as keyof typeof ESTADOS]?.class}`}>{ESTADOS[o.estado as keyof typeof ESTADOS]?.label}</span></td>
                   <td style={{ fontWeight: 800, fontFamily: 'var(--font-mono)', fontSize: 13 }}>${o.total?.toLocaleString() ?? 0}</td>
-                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
-                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{o.fecha_entrega_esperada ? new Date(o.fecha_entrega_esperada).toLocaleDateString() : 'Pendiente'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}><ClientDate value={o.created_at} /></td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}><ClientDate value={o.fecha_entrega_esperada} fallback="Pendiente" /></td>
                   <td>
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                       <button type="button" className="btn-icon btn-icon-sm" onClick={() => setDetalle(o)}><Eye size={12} /></button>
@@ -408,7 +417,7 @@ export default function ComprasPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showNueva && <NuevaOrdenModal tasaIva={tasaIva} onClose={() => setShowNueva(false)} onSaved={() => { setShowNueva(false); fetchOrdenes(); }} />}

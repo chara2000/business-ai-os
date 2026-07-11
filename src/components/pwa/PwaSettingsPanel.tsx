@@ -17,7 +17,7 @@ export function PwaSettingsPanel() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="pwa-settings-panel">
       <div className="card" style={{ padding: 24, background: 'var(--bg-input)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -13,6 +13,8 @@ import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { aggregateCashflow, filterByPeriod, downloadCsv } from '@/lib/db-helpers';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { useClientPagination } from '@/lib/hooks/useClientPagination';
 
 const supabase = createClient();
 
@@ -98,6 +100,9 @@ export default function ReportesPage() {
   }, [empresaId, periodo]);
 
   useEffect(() => { fetchReportes(); }, [fetchReportes]);
+
+  const { paginated: paginatedForecast, pagination: forecastPagination } = useClientPagination(forecastTop, 10);
+  const { paginated: paginatedProductos, pagination: productosPagination } = useClientPagination(topProductos, 10);
 
   const exportReport = () => {
     downloadCsv(
@@ -221,7 +226,7 @@ export default function ReportesPage() {
         {forecastTop.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sin datos suficientes para predecir</p>
         ) : (
-          <div className="table-wrapper">
+          <TablePanel padded={false} pagination={forecastPagination}>
             <table className="table">
               <thead>
                 <tr>
@@ -232,7 +237,7 @@ export default function ReportesPage() {
                 </tr>
               </thead>
               <tbody>
-                {forecastTop.map((f) => (
+                {paginatedForecast.map((f) => (
                   <tr key={f.nombre}>
                     <td>{f.nombre}</td>
                     <td>{f.demanda_proyectada_30d} uds</td>
@@ -242,7 +247,7 @@ export default function ReportesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablePanel>
         )}
       </div>
 
@@ -251,7 +256,7 @@ export default function ReportesPage() {
         {topProductos.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>No hay datos para mostrar</p>
         ) : (
-          <div className="table-wrapper" style={{ margin: '0 -24px -24px -24px', borderTop: '1px solid var(--border)' }}>
+          <TablePanel padded={false} pagination={productosPagination}>
             <table className="table">
               <thead>
                 <tr>
@@ -262,17 +267,20 @@ export default function ReportesPage() {
                 </tr>
               </thead>
               <tbody>
-                {topProductos.map((p, i) => (
-                  <tr key={p.nombre + i}>
-                    <td style={{ paddingLeft: 24 }}><span style={{ fontWeight: 800, color: BAR_COLORS[i % BAR_COLORS.length] }}>{i + 1}</span></td>
+                {paginatedProductos.map((p, i) => {
+                  const globalIndex = (productosPagination.currentPage - 1) * productosPagination.pageSize + i;
+                  return (
+                  <tr key={p.nombre + globalIndex}>
+                    <td style={{ paddingLeft: 24 }}><span style={{ fontWeight: 800, color: BAR_COLORS[globalIndex % BAR_COLORS.length] }}>{globalIndex + 1}</span></td>
                     <td>{p.nombre}</td>
                     <td><span className="badge badge-info">{p.ventas} uds</span></td>
                     <td style={{ fontWeight: 800, fontFamily: 'var(--font-mono)' }}>${p.ingresos.toLocaleString()}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
-          </div>
+          </TablePanel>
         )}
       </div>
     </div>

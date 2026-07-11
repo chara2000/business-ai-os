@@ -13,6 +13,7 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import type { Proveedor } from '@/types';
 
 const supabase = createClient();
@@ -163,6 +164,8 @@ export default function ProveedoresPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editProv, setEditProv] = useState<Proveedor | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchProveedores = useCallback(async () => {
     if (!empresaId) return;
@@ -179,6 +182,11 @@ export default function ProveedoresPage() {
     p.nombre.toLowerCase().includes(search.toLowerCase()) ||
     (p.contacto ?? '').toLowerCase().includes(search.toLowerCase())
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   const moduleStats = [
     { label: 'Proveedores', value: proveedores.length, icon: Building2, tone: 'brand' as const },
@@ -220,7 +228,7 @@ export default function ProveedoresPage() {
           )}
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -234,7 +242,7 @@ export default function ProveedoresPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => (
+              {paginated.map(p => (
                 <tr key={p.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -274,7 +282,7 @@ export default function ProveedoresPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showForm && (

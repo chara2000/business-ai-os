@@ -50,6 +50,11 @@ export function usePwa() {
     window.addEventListener('appinstalled', onInstalled);
 
     if ('serviceWorker' in navigator) {
+      if (process.env.NODE_ENV !== 'production') {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => reg.unregister());
+        });
+      } else {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((reg) => {
@@ -65,6 +70,7 @@ export function usePwa() {
           });
         })
         .catch(() => setSwReady(false));
+      }
     }
 
     return () => {

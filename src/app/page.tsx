@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  Zap, Bot, Package, TrendingUp, Users, CreditCard,
+  Zap, Bot, Package, TrendingUp, Users,
   MessageCircle, Smartphone, Globe, Shield, ArrowRight,
-  Check, Star, Sparkles, BarChart3,
+  Check, Star, Sparkles, BarChart3, CreditCard,
 } from 'lucide-react';
+import './landing.css';
 
 export const metadata: Metadata = {
   title: 'Business AI OS — El Sistema Empresarial con Inteligencia Artificial',
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
 };
 
 const FEATURES = [
-  { icon: Bot, title: 'Asistente IA integrado', desc: 'Controla tu negocio hablando con inteligencia artificial. Sin aprender software complicado.', color: 'violet' },
-  { icon: Package, title: 'Inventario inteligente', desc: 'Control de stock, kardex, alertas automáticas y predicción de demanda con IA.', color: 'cyan' },
-  { icon: TrendingUp, title: 'Ventas en tiempo real', desc: 'Punto de venta, facturas, historial y reportes de rentabilidad al instante.', color: 'green' },
-  { icon: Users, title: 'CRM completo', desc: 'Gestión de clientes, créditos, fiados y cartera con alertas de morosidad.', color: 'gold' },
-  { icon: MessageCircle, title: 'Bots Telegram & WhatsApp', desc: 'Tu negocio disponible en tus apps de mensajería favoritas. Respuestas en segundos.', color: 'indigo' },
-  { icon: BarChart3, title: 'Reportes inteligentes', desc: 'Dashboards visuales con análisis de rentabilidad, tendencias y predicciones.', color: 'rose' },
+  { icon: Bot, title: 'Asistente IA integrado', desc: 'Controla tu negocio hablando con inteligencia artificial. Sin aprender software complicado.' },
+  { icon: Package, title: 'Inventario inteligente', desc: 'Control de stock, kardex, alertas automáticas y predicción de demanda con IA.' },
+  { icon: TrendingUp, title: 'Ventas en tiempo real', desc: 'Punto de venta, facturas, historial y reportes de rentabilidad al instante.' },
+  { icon: Users, title: 'CRM completo', desc: 'Gestión de clientes, créditos, fiados y cartera con alertas de morosidad.' },
+  { icon: MessageCircle, title: 'Bots Telegram & WhatsApp', desc: 'Tu negocio disponible en tus apps de mensajería favoritas. Respuestas en segundos.' },
+  { icon: BarChart3, title: 'Reportes inteligentes', desc: 'Dashboards visuales con análisis de rentabilidad, tendencias y predicciones.' },
 ];
 
 const PLANS = [
@@ -41,162 +42,133 @@ const TESTIMONIALS = [
   { name: 'Carlos Vega', empresa: 'Taller Mecánico CV', text: 'Lo instalé en mi celular como app. Es como tener un contador en el bolsillo.', stars: 5 },
 ];
 
-const ICON_COLORS: Record<string, { bg: string; border: string; icon: string }> = {
-  violet: { bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.25)', icon: 'rgb(167,139,250)' },
-  cyan:   { bg: 'rgba(6,182,212,0.12)',  border: 'rgba(6,182,212,0.25)',  icon: 'rgb(34,211,238)' },
-  green:  { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', icon: 'rgb(52,211,153)' },
-  gold:   { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', icon: 'rgb(251,191,36)' },
-  indigo: { bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.25)', icon: 'rgb(129,140,248)' },
-  rose:   { bg: 'rgba(244,63,94,0.12)',  border: 'rgba(244,63,94,0.25)',  icon: 'rgb(251,113,133)' },
-};
-
 export default function HomePage() {
   return (
-    <main style={{ minHeight: '100vh', overflowX: 'hidden' }}>
+    <div className="landing-page">
+      <div className="landing-bg" aria-hidden>
+        <div className="landing-bg__orb landing-bg__orb--lime" />
+        <div className="landing-bg__orb landing-bg__orb--violet" />
+        <div className="landing-bg__grid" />
+      </div>
 
-      {/* NAVBAR */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 40px', height: 64,
-        background: 'rgba(2,4,16,0.85)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg, rgb(139,92,246), rgb(99,102,241))', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
-            <Zap size={18} color="white" strokeWidth={2.5} />
-          </div>
-          <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'white' }}>Business AI OS</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link href="/login" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.70)', textDecoration: 'none', transition: 'color 0.2s' }}>
-            Iniciar sesión
-          </Link>
-          <Link href="/register" className="btn-primary" style={{ textDecoration: 'none', padding: '8px 20px', fontSize: 14 }}>
+      <header className="landing-nav">
+        <Link href="/" className="landing-brand">
+          <span className="landing-brand__mark">
+            <Zap size={18} strokeWidth={2.5} />
+          </span>
+          <span className="landing-brand__name">Business AI OS</span>
+        </Link>
+        <div className="landing-nav__actions">
+          <Link href="/login" className="landing-nav__link">Iniciar sesión</Link>
+          <Link href="/register" className="landing-btn landing-btn--primary">
             Empezar gratis <ArrowRight size={15} />
           </Link>
         </div>
-      </nav>
+      </header>
 
-      {/* HERO */}
-      <section style={{ paddingTop: 160, paddingBottom: 100, textAlign: 'center', padding: '160px 24px 100px', position: 'relative' }}>
-        {/* Glow effects */}
-        <div aria-hidden style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
-
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 800, margin: '0 auto' }}>
-          <div className="animate-fade-in" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.30)', borderRadius: 20, marginBottom: 28 }}>
-            <Sparkles size={13} color="rgb(167,139,250)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'rgb(167,139,250)' }}>Nuevo: Asistente de voz con Whisper AI</span>
+      <section className="landing-hero">
+        <div className="landing-hero__inner">
+          <div className="landing-eyebrow">
+            <Sparkles size={13} />
+            Nuevo: Asistente de voz con Whisper AI
           </div>
 
-          <h1 className="animate-slide-up" style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 900, lineHeight: 1.05, marginBottom: 24 }}>
-            <span className="gradient-text">Tu gerente digital</span>
+          <h1>
+            <span className="accent">Tu gerente digital</span>
             <br />
-            <span style={{ color: 'white' }}>con inteligencia artificial</span>
+            con inteligencia artificial
           </h1>
 
-          <p className="animate-slide-up delay-100" style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'rgba(255,255,255,0.60)', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.7 }}>
+          <p>
             Administra toda tu empresa — inventario, ventas, clientes y finanzas — hablando con IA desde web, móvil o WhatsApp. Sin aprender software complicado.
           </p>
 
-          <div className="animate-slide-up delay-200" style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/register" className="btn-primary" style={{ textDecoration: 'none', padding: '14px 32px', fontSize: 16, borderRadius: 14 }}>
+          <div className="landing-hero__cta">
+            <Link href="/register" className="landing-btn landing-btn--primary">
               Empezar gratis — 14 días <ArrowRight size={18} />
             </Link>
-            <Link href="/dashboard" className="btn-secondary" style={{ textDecoration: 'none', padding: '14px 32px', fontSize: 16, borderRadius: 14 }}>
+            <Link href="/dashboard" className="landing-btn landing-btn--ghost">
               Ver demo en vivo
             </Link>
           </div>
 
-          <div className="animate-fade-in delay-400" style={{ display: 'flex', gap: 32, justifyContent: 'center', marginTop: 48, flexWrap: 'wrap' }}>
+          <div className="landing-hero__stats">
             {[
               { value: '500+', label: 'Empresas activas' },
               { value: '99.9%', label: 'Uptime' },
               { value: '< 1s', label: 'Respuesta IA' },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'white' }}>{s.value}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>{s.label}</div>
+            ].map((s) => (
+              <div key={s.label} className="landing-stat">
+                <strong>{s.value}</strong>
+                <span>{s.label}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section style={{ padding: '80px 40px', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(28px,4vw,44px)', fontWeight: 800, color: 'white', marginBottom: 12 }}>
-            Todo lo que tu negocio necesita
-          </h2>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.50)', maxWidth: 540, margin: '0 auto' }}>
-            Un sistema completo que se adapta a cualquier tipo de comercio
-          </p>
+      <section className="landing-features landing-section">
+        <div className="landing-section-head">
+          <h2>Todo lo que tu negocio necesita</h2>
+          <p>Un sistema completo que se adapta a cualquier tipo de comercio</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-          {FEATURES.map((f, i) => {
+        <div className="landing-feature-grid">
+          {FEATURES.map((f) => {
             const Icon = f.icon;
-            const c = ICON_COLORS[f.color];
             return (
-              <div key={f.title} className={`glass-card animate-fade-in delay-${(i % 3 + 1) * 100}`} style={{ padding: 28 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: c.bg, border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
-                  <Icon size={22} color={c.icon} />
+              <article key={f.title} className="landing-feature-card">
+                <div className="landing-feature-card__icon">
+                  <Icon size={22} />
                 </div>
-                <h3 style={{ fontSize: 17, fontWeight: 700, color: 'white', marginBottom: 10 }}>{f.title}</h3>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>{f.desc}</p>
-              </div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </article>
             );
           })}
         </div>
       </section>
 
-      {/* PLATFORMS */}
-      <section style={{ padding: '80px 40px', background: 'rgba(139,92,246,0.04)', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+      <section className="landing-platform">
+        <div className="landing-section landing-platform__grid">
           <div>
-            <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 800, color: 'white', marginBottom: 16 }}>
-              Disponible en todos tus dispositivos
-            </h2>
-            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, marginBottom: 32 }}>
-              Web, app móvil PWA, Telegram y WhatsApp. Tu negocio siempre en tu bolsillo.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="landing-section-head" style={{ textAlign: 'left', marginBottom: 0 }}>
+              <h2>Disponible en todos tus dispositivos</h2>
+              <p style={{ margin: '0' }}>Web, app móvil PWA, Telegram y WhatsApp. Tu negocio siempre en tu bolsillo.</p>
+            </div>
+            <div className="landing-platform__list">
               {[
                 { icon: Globe, label: 'Panel web completo', desc: 'Todos los módulos desde cualquier navegador' },
                 { icon: Smartphone, label: 'PWA instalable', desc: 'App nativa en Android, iOS y escritorio' },
                 { icon: MessageCircle, label: 'Bot Telegram & WhatsApp', desc: 'Consultas y comandos desde tus chats' },
-              ].map(item => {
+              ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon size={18} color="rgb(167,139,250)" />
-                    </div>
+                  <div key={item.label} className="landing-platform__item">
+                    <span className="landing-platform__item-icon"><Icon size={18} /></span>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'white', marginBottom: 3 }}>{item.label}</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>{item.desc}</div>
+                      <strong>{item.label}</strong>
+                      <span>{item.desc}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="landing-mini-grid">
             {[
-              { icon: Shield, label: 'Multi-empresa', sub: 'Datos 100% aislados', color: 'violet' },
-              { icon: Bot, label: 'IA empresarial', sub: 'GPT-4o integrado', color: 'cyan' },
-              { icon: BarChart3, label: 'Reportes IA', sub: 'Análisis automático', color: 'green' },
-              { icon: TrendingUp, label: 'Tiempo real', sub: 'Sin recargar página', color: 'gold' },
-            ].map(item => {
+              { icon: Shield, label: 'Multi-empresa', sub: 'Datos 100% aislados' },
+              { icon: Bot, label: 'IA empresarial', sub: 'GPT-4o integrado' },
+              { icon: BarChart3, label: 'Reportes IA', sub: 'Análisis automático' },
+              { icon: CreditCard, label: 'Tiempo real', sub: 'Sin recargar página' },
+            ].map((item) => {
               const Icon = item.icon;
-              const c = ICON_COLORS[item.color];
               return (
-                <div key={item.label} className="glass-card" style={{ padding: 20, textAlign: 'center' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: c.bg, border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <Icon size={20} color={c.icon} />
+                <div key={item.label} className="landing-mini-card">
+                  <div className="landing-feature-card__icon" style={{ margin: '0 auto' }}>
+                    <Icon size={20} />
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'white', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>{item.sub}</div>
+                  <strong>{item.label}</strong>
+                  <span>{item.sub}</span>
                 </div>
               );
             })}
@@ -204,104 +176,89 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PLANS */}
-      <section style={{ padding: '80px 40px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(28px,4vw,42px)', fontWeight: 800, color: 'white', marginBottom: 12 }}>Planes para tu negocio</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.50)' }}>14 días gratis. Sin tarjeta de crédito.</p>
+      <section className="landing-plans landing-section">
+        <div className="landing-section-head">
+          <h2>Planes para tu negocio</h2>
+          <p>14 días gratis. Sin tarjeta de crédito.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-          {PLANS.map(plan => (
-            <div key={plan.name} className="glass-card" style={{
-              padding: 28,
-              border: plan.popular ? '1px solid rgba(139,92,246,0.50)' : '1px solid var(--border-default)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {plan.popular && (
-                <>
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, rgb(139,92,246), rgb(99,102,241))' }} />
-                  <div style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(139,92,246,0.20)', border: '1px solid rgba(139,92,246,0.40)', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: 'rgb(167,139,250)' }}>
-                    Más popular
-                  </div>
-                </>
-              )}
-              <h3 style={{ fontSize: 20, fontWeight: 800, color: 'white', fontFamily: 'Outfit, sans-serif', marginBottom: 8 }}>{plan.name}</h3>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 24 }}>
-                <span style={{ fontSize: 32, fontWeight: 900, color: 'white', fontFamily: 'Outfit, sans-serif' }}>{plan.price}</span>
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.40)', paddingBottom: 4 }}>{plan.period}</span>
+        <div className="landing-plan-grid">
+          {PLANS.map((plan) => (
+            <article
+              key={plan.name}
+              className={`landing-plan-card${plan.popular ? ' landing-plan-card--popular' : ''}`}
+            >
+              {plan.popular && <span className="landing-plan-card__badge">Más popular</span>}
+              <h3>{plan.name}</h3>
+              <div className="landing-plan-card__price">
+                <strong>{plan.price}</strong>
+                <span>{plan.period}</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-                {plan.features.map(f => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Check size={15} color="rgb(52,211,153)" />
-                    <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.70)' }}>{f}</span>
-                  </div>
+              <ul>
+                {plan.features.map((f) => (
+                  <li key={f}>
+                    <Check size={15} />
+                    {f}
+                  </li>
                 ))}
-              </div>
-              <Link href="/register" className={plan.popular ? 'btn-primary' : 'btn-secondary'} style={{ textDecoration: 'none', width: '100%', justifyContent: 'center', display: 'flex' }}>
+              </ul>
+              <Link
+                href="/register"
+                className={`landing-btn ${plan.popular ? 'landing-btn--primary' : 'landing-btn--ghost'}`}
+                style={{ width: '100%' }}
+              >
                 Comenzar gratis
               </Link>
-            </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section style={{ padding: '80px 40px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(26px,4vw,40px)', fontWeight: 800, color: 'white', textAlign: 'center', marginBottom: 48 }}>
-            Empresarios que confían en nosotros
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} className="glass-card" style={{ padding: 28 }}>
-                <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
-                  {Array(t.stars).fill(0).map((_, i) => <Star key={i} size={14} fill="rgb(245,158,11)" color="rgb(245,158,11)" />)}
+      <section className="landing-testimonials">
+        <div className="landing-section">
+          <div className="landing-section-head">
+            <h2>Empresarios que confían en nosotros</h2>
+          </div>
+          <div className="landing-testimonial-grid">
+            {TESTIMONIALS.map((t) => (
+              <article key={t.name} className="landing-testimonial-card">
+                <div className="landing-testimonial-card__stars">
+                  {Array(t.stars).fill(0).map((_, i) => (
+                    <Star key={i} size={14} fill="currentColor" />
+                  ))}
                 </div>
-                <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic' }}>"{t.text}"</p>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>{t.empresa}</div>
-                </div>
-              </div>
+                <blockquote>&ldquo;{t.text}&rdquo;</blockquote>
+                <cite>
+                  {t.name}
+                  <span>{t.empresa}</span>
+                </cite>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{ padding: '100px 40px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 800, height: 400, background: 'radial-gradient(ellipse, rgba(139,92,246,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(32px,5vw,56px)', fontWeight: 900, color: 'white', marginBottom: 16 }}>
-            Empieza hoy. Es gratis.
-          </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.55)', marginBottom: 40, maxWidth: 480, margin: '0 auto 40px' }}>
-            Únete a más de 500 empresas que ya administran su negocio con inteligencia artificial.
-          </p>
-          <Link href="/register" className="btn-primary" style={{ textDecoration: 'none', padding: '16px 40px', fontSize: 18, borderRadius: 16 }}>
-            Crear mi cuenta gratis <ArrowRight size={20} />
-          </Link>
-        </div>
+      <section className="landing-cta">
+        <h2>Empieza hoy. Es gratis.</h2>
+        <p>Únete a más de 500 empresas que ya administran su negocio con inteligencia artificial.</p>
+        <Link href="/register" className="landing-btn landing-btn--primary" style={{ fontSize: 16, padding: '14px 32px' }}>
+          Crear mi cuenta gratis <ArrowRight size={20} />
+        </Link>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ padding: '40px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 30, height: 30, background: 'linear-gradient(135deg, rgb(139,92,246), rgb(99,102,241))', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={14} color="white" strokeWidth={2.5} />
-          </div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Outfit, sans-serif' }}>Business AI OS</span>
-        </div>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>© 2026 Business AI OS. Todos los derechos reservados.</p>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {['Privacidad', 'Términos', 'Soporte'].map(l => (
-            <a key={l} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', textDecoration: 'none' }}>{l}</a>
-          ))}
-        </div>
+      <footer className="landing-footer">
+        <Link href="/" className="landing-brand">
+          <span className="landing-brand__mark" style={{ width: 30, height: 30, borderRadius: 8 }}>
+            <Zap size={14} strokeWidth={2.5} />
+          </span>
+          <span className="landing-brand__name" style={{ fontSize: 14 }}>Business AI OS</span>
+        </Link>
+        <p className="landing-footer__copy">© 2026 Business AI OS. Todos los derechos reservados.</p>
+        <nav className="landing-footer__links" aria-label="Legal">
+          <a href="#">Privacidad</a>
+          <a href="#">Términos</a>
+          <a href="#">Soporte</a>
+        </nav>
       </footer>
-
-    </main>
+    </div>
   );
 }

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { useClientPagination } from '@/lib/hooks/useClientPagination';
 import type { DemandForecast } from '@/lib/forecast/demand';
 
 type Resumen = {
@@ -40,6 +42,7 @@ export function DemandForecastPanel() {
   };
 
   useEffect(() => { fetchForecast(); }, []);
+  const { paginated, pagination } = useClientPagination(forecasts, 10, [forecasts.length]);
 
   return (
     <>
@@ -88,7 +91,7 @@ export function DemandForecastPanel() {
         </ActionButton>
       </div>
 
-      <div className="data-panel data-panel--bounded">
+      <TablePanel pagination={pagination}>
         <table className="table">
           <thead>
             <tr>
@@ -107,7 +110,7 @@ export function DemandForecastPanel() {
               <tr><td colSpan={8} className="table-empty">Calculando predicción...</td></tr>
             ) : forecasts.length === 0 ? (
               <tr><td colSpan={8} className="table-empty">Sin datos de ventas suficientes para predecir</td></tr>
-            ) : forecasts.map((f) => (
+            ) : paginated.map((f) => (
               <tr key={f.producto_id}>
                 <td>
                   <strong>{f.nombre}</strong>
@@ -128,7 +131,7 @@ export function DemandForecastPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablePanel>
     </>
   );
 }

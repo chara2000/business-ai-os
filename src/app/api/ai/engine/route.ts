@@ -45,8 +45,8 @@ export async function DELETE() {
     if (!ctx) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
     const supabase = await createClient();
-    const { clearSession } = await import('@/lib/ai/engine/session-manager');
-    await clearSession(supabase, ctx.usuario.id);
+    const { clearChatSession } = await import('@/lib/ai/engine/session-manager');
+    await clearChatSession(supabase, ctx.usuario.id);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Error';

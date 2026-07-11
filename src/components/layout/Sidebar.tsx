@@ -5,38 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard, Package, ShoppingCart, TrendingUp, Users,
-  CreditCard, DollarSign, BarChart3, Settings, Truck,
-  LogOut, Building2, Bot, Crown, Store, Search, Sparkles, RotateCcw, Shield,
+  LogOut, Crown, Store, Search, Sparkles,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAppStore } from '@/stores/appStore';
 import { filterNavByPermissions } from '@/lib/permissions';
+import type { NavItem } from '@/lib/navigation';
+import { NAV_FINANCE, NAV_MAIN, NAV_SYSTEM } from '@/lib/navigation';
 import toast from 'react-hot-toast';
-
-const NAV_MAIN = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Ventas', href: '/ventas', icon: TrendingUp },
-  { label: 'Devoluciones', href: '/devoluciones', icon: RotateCcw },
-  { label: 'Inventario', href: '/inventario', icon: Package },
-  { label: 'Compras', href: '/compras', icon: ShoppingCart },
-  { label: 'Clientes', href: '/clientes', icon: Users },
-  { label: 'Proveedores', href: '/proveedores', icon: Truck },
-];
-
-const NAV_FINANCE = [
-  { label: 'Créditos', href: '/creditos', icon: CreditCard },
-  { label: 'Finanzas', href: '/finanzas', icon: DollarSign },
-  { label: 'Reportes', href: '/reportes', icon: BarChart3 },
-];
-
-const NAV_SYSTEM = [
-  { label: 'Asistente IA', href: '/ai', icon: Bot, badge: 'IA' },
-  { label: 'Equipo', href: '/equipo', icon: Users, managerOnly: true },
-  { label: 'Auditoría', href: '/auditoria', icon: Shield, managerOnly: true },
-  { label: 'Mi Empresa', href: '/empresa', icon: Building2 },
-  { label: 'Configuración', href: '/configuracion', icon: Settings },
-];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -68,7 +44,7 @@ export function Sidebar() {
     }
   };
 
-  const renderNav = (items: Array<{ label: string; href: string; icon: typeof LayoutDashboard; badge?: string; managerOnly?: boolean }>, section: string) => (
+  const renderNav = (items: NavItem[], section: string) => (
     <>
       <div className="sidebar-section-label">{section}</div>
       {filterNavByPermissions(items, usuario).map(({ label, href, icon: Icon, badge }) => {

@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Settings, Bell, ChevronDown, LogOut, Crown, Sun, Moon,
-  Share2, HelpCircle, ChevronRight, Filter, Plus,
+  Share2, HelpCircle, ChevronRight, Filter, Plus, Menu,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -14,6 +14,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getUserInitials } from '@/lib/utils';
 import type { AppNotification } from '@/lib/notifications/alerts';
+import { useMobileNav } from '@/components/layout/MobileNavContext';
 
 const TOP_NAV = [
   { label: 'Dashboard', href: '/dashboard' },
@@ -44,9 +45,11 @@ const BREADCRUMB: Record<string, string> = {
 interface TopbarProps {
   title: string;
   subtitle?: string;
+  forceWebMode?: boolean;
+  onToggleWebMode?: () => void;
 }
 
-export function Topbar({ title, subtitle }: TopbarProps) {
+export function Topbar({ title, subtitle, forceWebMode = false, onToggleWebMode }: TopbarProps) {
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -63,6 +66,7 @@ export function Topbar({ title, subtitle }: TopbarProps) {
   const impersonatedEmpresa = useAppStore((s) => s.impersonatedEmpresa);
   const hasEmpresaContext = useAppStore((s) => !!s.getEffectiveEmpresaId());
   const clearImpersonation = useAppStore((s) => s.clearImpersonation);
+  const { openModules } = useMobileNav();
 
   const displayName = usuario ? `${usuario.nombre} ${usuario.apellido}`.trim() : 'Usuario';
   const firstName = usuario?.nombre?.split(' ')[0] ?? 'Usuario';
@@ -123,6 +127,20 @@ export function Topbar({ title, subtitle }: TopbarProps) {
       <header className="topbar-fintech">
         {/* Row 1 — Calescence horizontal nav */}
         <div className="topbar-fintech-row">
+          <button
+            type="button"
+            className="topbar-mobile-menu"
+            onClick={openModules}
+            aria-label="Abrir menú de módulos"
+          >
+            <Menu size={20} />
+          </button>
+
+          <div className="topbar-mobile-title">
+            <span className="topbar-mobile-crumb">{crumb}</span>
+            <span className="topbar-mobile-greeting">Hola, {firstName}</span>
+          </div>
+
           <nav className="topbar-nav-pills" aria-label="Navegación principal">
             {TOP_NAV.map(({ label, href }) => (
               <Link
@@ -136,6 +154,14 @@ export function Topbar({ title, subtitle }: TopbarProps) {
           </nav>
 
           <div className="topbar-fintech-utils">
+            <button
+              type="button"
+              className={`topbar-webmode-btn ${forceWebMode ? 'is-active' : ''}`}
+              onClick={onToggleWebMode}
+              aria-label={forceWebMode ? 'Cambiar a modo móvil' : 'Cambiar a modo web'}
+            >
+              {forceWebMode ? 'Modo móvil' : 'Modo web'}
+            </button>
             <button type="button" className="topbar-icon-btn" onClick={toggle} aria-label="Tema">
               {resolved === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>

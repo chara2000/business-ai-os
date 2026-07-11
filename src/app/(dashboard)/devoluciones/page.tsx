@@ -12,6 +12,8 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { ClientDate } from '@/components/ui/ClientDate';
 import type { Devolucion, ReturnStatus } from '@/types';
 
 const supabase = createClient();
@@ -193,6 +195,8 @@ export default function DevolucionesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchData = useCallback(async () => {
     if (!empresaId) return;
@@ -214,6 +218,9 @@ export default function DevolucionesPage() {
     (d.producto?.nombre ?? '').toLowerCase().includes(search.toLowerCase()),
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalMonto = devoluciones.reduce((s, d) => s + (d.monto_devuelto ?? 0), 0);
 
   const moduleStats = [
@@ -249,7 +256,7 @@ export default function DevolucionesPage() {
           </ActionButton>
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -262,19 +269,19 @@ export default function DevolucionesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((d) => (
+              {paginated.map((d) => (
                 <tr key={d.id}>
                   <td style={{ fontWeight: 600 }}>{d.producto?.nombre ?? '—'}</td>
                   <td>{d.cantidad}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{d.motivo}</td>
                   <td><span className="badge badge-muted">{ESTADOS[d.estado]}</span></td>
                   <td style={{ fontWeight: 700 }}>${(d.monto_devuelto ?? 0).toLocaleString('es-CO')}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{new Date(d.created_at).toLocaleDateString('es-CO')}</td>
+                  <td style={{ color: 'var(--text-muted)' }}><ClientDate value={d.created_at} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showForm && (

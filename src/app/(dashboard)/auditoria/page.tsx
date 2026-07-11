@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import type { AuditoriaLog } from '@/types';
 
 const supabase = createClient();
@@ -19,6 +20,8 @@ export default function AuditoriaPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtroEntidad, setFiltroEntidad] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchLogs = useCallback(async () => {
     if (!empresaId) return;
@@ -50,6 +53,11 @@ export default function AuditoriaPage() {
       `${l.usuario?.nombre ?? ''} ${l.usuario?.apellido ?? ''}`.toLowerCase().includes(q)
     );
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, filtroEntidad]);
 
   const moduleStats = [
     { label: 'Registros', value: logs.length, icon: Database, tone: 'brand' as const },
@@ -83,7 +91,7 @@ export default function AuditoriaPage() {
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Las acciones del sistema y la IA aparecerán aquí</p>
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -95,7 +103,7 @@ export default function AuditoriaPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((l) => (
+              {paginated.map((l) => (
                 <tr key={l.id}>
                   <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                     {new Date(l.created_at).toLocaleString('es-CO')}
@@ -112,7 +120,7 @@ export default function AuditoriaPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
     </ModuleShell>
   );

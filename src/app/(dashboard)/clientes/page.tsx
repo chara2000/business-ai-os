@@ -13,6 +13,7 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import { formatCurrency } from '@/lib/utils';
 import type { Cliente } from '@/types';
 
@@ -123,6 +124,8 @@ export default function ClientesPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editCliente, setEditCliente] = useState<Cliente | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchClientes = useCallback(async () => {
     if (!empresaId) return;
@@ -146,6 +149,11 @@ export default function ClientesPage() {
     `${c.nombre} ${c.apellido}`.toLowerCase().includes(search.toLowerCase()) ||
     (c.telefono ?? '').includes(search) || (c.email ?? '').includes(search)
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   const totalCartera = clientes.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0);
   const morosos = clientes.filter(c => (c.saldo_pendiente ?? 0) > 0).length;
@@ -191,7 +199,7 @@ export default function ClientesPage() {
           )}
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -204,7 +212,7 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
+              {paginated.map((c) => (
                 <tr key={c.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -238,7 +246,7 @@ export default function ClientesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showForm && (

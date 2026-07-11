@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import { getEmpresaId } from '@/lib/getEmpresaId';
 import { getUsuarioId, generateDocNumber, downloadCsv } from '@/lib/db-helpers';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { calcImpuestos, getTasaIva, formatTasaIva } from '@/lib/tax';
 import { logAudit } from '@/lib/audit';
 import { printVentaFactura } from '@/lib/pdf/venta-factura';
@@ -20,6 +21,7 @@ import { FormModal } from '@/components/ui/FormModal';
 import { Modal } from '@/components/ui/Modal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import type { Venta } from '@/types';
 
 const supabase = createClient();
@@ -336,13 +338,15 @@ export default function VentasPage() {
   const [search, setSearch] = useState('');
   const [showNueva, setShowNueva] = useState(false);
   const [detalle, setDetalle] = useState<Venta | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchVentas = useCallback(async () => {
     if (!empresaId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from('ventas')
-      .select('*, cliente:clientes(*), items_venta(*, producto:productos(nombre, codigo))')
+      .select('*, cliente:clientes(*), items_venta(*, producto:productos(id, nombre, codigo))')
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: false });
     if (error) toast.error('Error al cargar ventas');
@@ -356,6 +360,11 @@ export default function VentasPage() {
     v.numero.toLowerCase().includes(search.toLowerCase()) ||
     (v.cliente?.nombre ?? '').toLowerCase().includes(search.toLowerCase()),
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   const totalHoy = ventas.reduce((s, v) => s + v.total, 0);
   const completadas = ventas.filter((v) => v.estado === 'completada').length;
@@ -418,7 +427,7 @@ export default function VentasPage() {
           )}
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -426,6 +435,7 @@ export default function VentasPage() {
                 <th>Cliente</th>
                 <th>Método de Pago</th>
                 <th>Tipo</th>
+                <th>Productos</th>
                 <th>Total</th>
                 <th>Estado</th>
                 <th>Fecha</th>
@@ -433,7 +443,7 @@ export default function VentasPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((v) => (
+              {paginated.map((v) => (
                 <tr key={v.id}>
                   <td><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-light)', fontFamily: 'var(--font-mono)' }}>{v.numero}</span></td>
                   <td>
@@ -446,9 +456,24 @@ export default function VentasPage() {
                   </td>
                   <td style={{ textTransform: 'capitalize', color: 'var(--text-secondary)' }}>{v.metodo_pago}</td>
                   <td>{v.es_credito ? <span className="badge badge-warning">Crédito</span> : <span className="badge badge-info">Contado</span>}</td>
+                  <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {v.items_venta && v.items_venta.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {v.items_venta.map((item, idx) => (
+                          <span key={idx}>
+                            {item.cantidad}x {item.producto?.nombre || 'Producto eliminado'}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="muted">Sin ítems</span>
+                    )}
+                  </td>
                   <td style={{ fontWeight: 800 }}>${v.total.toLocaleString()}</td>
                   <td><span className={`badge ${v.estado === 'completada' ? 'badge-success' : v.estado === 'cancelada' ? 'badge-danger' : 'badge-warning'}`}>{v.estado}</span></td>
-                  <td style={{ color: 'var(--text-muted)' }}>{new Date(v.created_at).toLocaleDateString('es-CO')}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>
+                    <ClientDate value={v.created_at} />
+                  </td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button type="button" className="btn-icon btn-icon-sm" title="Ver detalle" onClick={() => setDetalle(v)}>
@@ -463,7 +488,7 @@ export default function VentasPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showNueva && (

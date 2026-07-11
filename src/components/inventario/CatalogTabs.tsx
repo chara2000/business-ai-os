@@ -9,6 +9,8 @@ import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { useClientPagination } from '@/lib/hooks/useClientPagination';
 import type { Categoria, Marca } from '@/types';
 
 const supabase = createClient();
@@ -99,6 +101,7 @@ export function CategoriasPanel() {
   };
 
   const filtered = items.filter((c) => c.nombre.toLowerCase().includes(search.toLowerCase()));
+  const { paginated, pagination } = useClientPagination(filtered, 10, [search]);
 
   return (
     <>
@@ -108,11 +111,11 @@ export function CategoriasPanel() {
           Nueva Categoría
         </ActionButton>
       </div>
-      <div className="data-panel data-panel--bounded">
+      <TablePanel pagination={pagination}>
         <table className="table">
           <thead><tr><th>Nombre</th><th>Descripción</th><th style={{ width: 80 }} /></tr></thead>
           <tbody>
-            {filtered.map((c) => (
+            {paginated.map((c) => (
               <tr key={c.id}>
                 <td style={{ fontWeight: 600 }}>{c.nombre}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{c.descripcion ?? '—'}</td>
@@ -125,7 +128,7 @@ export function CategoriasPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablePanel>
       {showForm && (
         <SimpleFormModal
           title={edit ? 'Editar Categoría' : 'Nueva Categoría'}
@@ -169,6 +172,7 @@ export function MarcasPanel() {
   };
 
   const filtered = items.filter((m) => m.nombre.toLowerCase().includes(search.toLowerCase()));
+  const { paginated, pagination } = useClientPagination(filtered, 10, [search]);
 
   return (
     <>
@@ -178,11 +182,11 @@ export function MarcasPanel() {
           Nueva Marca
         </ActionButton>
       </div>
-      <div className="data-panel data-panel--bounded">
+      <TablePanel pagination={pagination}>
         <table className="table">
           <thead><tr><th>Marca</th><th style={{ width: 80 }} /></tr></thead>
           <tbody>
-            {filtered.map((m) => (
+            {paginated.map((m) => (
               <tr key={m.id}>
                 <td style={{ fontWeight: 600 }}>{m.nombre}</td>
                 <td>
@@ -194,7 +198,7 @@ export function MarcasPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablePanel>
       {showForm && (
         <SimpleFormModal
           title={edit ? 'Editar Marca' : 'Nueva Marca'}
@@ -234,6 +238,7 @@ export function KardexPanel() {
     (m.producto?.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
     (m.motivo ?? '').toLowerCase().includes(search.toLowerCase()),
   );
+  const { paginated, pagination } = useClientPagination(filtered, 10, [search]);
 
   if (loading) {
     return <div className="skeleton" style={{ height: 120, borderRadius: 8 }} />;
@@ -247,7 +252,7 @@ export function KardexPanel() {
           <History size={14} /> Últimos 100 movimientos
         </span>
       </div>
-      <div className="data-panel data-panel--bounded">
+      <TablePanel pagination={pagination}>
         <table className="table">
           <thead>
             <tr>
@@ -261,7 +266,7 @@ export function KardexPanel() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((m) => (
+            {paginated.map((m) => (
               <tr key={m.id}>
                 <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(m.created_at).toLocaleString('es-CO')}</td>
                 <td style={{ fontWeight: 600 }}>{m.producto?.nombre ?? '—'}</td>
@@ -274,7 +279,7 @@ export function KardexPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablePanel>
     </>
   );
 }

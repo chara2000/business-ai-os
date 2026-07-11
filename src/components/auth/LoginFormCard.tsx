@@ -24,7 +24,10 @@ export function LoginFormCard() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       toast.success('¡Bienvenido de vuelta!');
-      router.push('/dashboard');
+      router.refresh();
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 100);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
       toast.error(msg === 'Invalid login credentials' ? 'Credenciales incorrectas' : msg);
@@ -34,13 +37,13 @@ export function LoginFormCard() {
   };
 
   return (
-    <div className="login-form-card auth-panel-content">
+    <div className="login-form-card login-form-card--minimal auth-panel-content">
       <div className="login-form-head">
-        <div className="sidebar-rail-logo" style={{ margin: '0 auto' }}>
+        <div className="sidebar-rail-logo login-form-logo" style={{ margin: '0 auto' }}>
           <Sparkles size={20} color="#1A1A1A" />
         </div>
         <h2>Iniciar sesión</h2>
-        <p>Accede a tu panel empresarial</p>
+        <p className="login-form-subtitle">Accede a tu panel empresarial</p>
       </div>
 
       <form onSubmit={handleLogin} className="login-form">
@@ -84,7 +87,7 @@ export function LoginFormCard() {
               <span className="login-submit-logo">
                 <Sparkles size={16} color="#1A1A1A" />
               </span>
-              <span className="login-submit-text">Ingresar al sistema</span>
+              <span className="login-submit-text">Ingresar</span>
               <ArrowRight size={18} />
             </>
           )}

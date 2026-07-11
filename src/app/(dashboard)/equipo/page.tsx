@@ -11,6 +11,8 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { ClientDate } from '@/components/ui/ClientDate';
 import {
   ALL_PERMISSIONS, ROLE_LABELS, assignableRoles, getDefaultPermisos,
 } from '@/lib/roles';
@@ -181,6 +183,8 @@ export default function EquipoPage() {
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchTeam = useCallback(async () => {
     setLoading(true);
@@ -243,6 +247,11 @@ export default function EquipoPage() {
   const filtered = members.filter((m) =>
     `${m.nombre} ${m.apellido} ${m.email}`.toLowerCase().includes(search.toLowerCase()),
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   const moduleStats = [
     { label: 'Total equipo', value: members.length, icon: Users, tone: 'brand' as const },
@@ -280,7 +289,7 @@ export default function EquipoPage() {
           </ActionButton>
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded table-surface">
+        <TablePanel className="table-surface" pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -294,7 +303,7 @@ export default function EquipoPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((m) => (
+              {paginated.map((m) => (
                 <tr key={m.id}>
                   <td>
                     <div className="table-cell-entity">
@@ -316,7 +325,7 @@ export default function EquipoPage() {
                     </span>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {new Date(m.created_at).toLocaleDateString('es-CO')}
+                    <ClientDate value={m.created_at} />
                   </td>
                   <td>
                     {resetId === m.id ? (
@@ -354,7 +363,7 @@ export default function EquipoPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       )}
 
       {showCreate && usuario && (

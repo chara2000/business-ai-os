@@ -18,6 +18,7 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import toast from 'react-hot-toast';
 import type { Producto } from '@/types';
 
@@ -257,6 +258,8 @@ export default function InventarioPage() {
   const [editProduct, setEditProduct] = useState<Producto | null>(null);
   const [qrProduct, setQrProduct] = useState<Producto | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchProducts = useCallback(async () => {
     if (!empresaId) return;
@@ -285,6 +288,11 @@ export default function InventarioPage() {
       p.stock_actual === 0;
     return matchSearch && matchStatus;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, filterStatus]);
 
   const stats = {
     total: products.length,
@@ -309,7 +317,7 @@ export default function InventarioPage() {
 
   return (
     <ModuleShell
-      boundedTable={activeTab === 'productos'}
+      boundedTable={false}
       stats={activeTab === 'productos' ? moduleStats : undefined}
       toolbar={activeTab === 'productos' ? (
         <>
@@ -360,7 +368,8 @@ export default function InventarioPage() {
         </>
       ) : undefined}
     >
-      <div className="tabs-premium" style={{ marginBottom: 20 }}>
+      <div className="inventario-tab-shell">
+      <div className="tabs-premium tabs-premium--inset">
         {INVENTARIO_TABS.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -406,7 +415,7 @@ export default function InventarioPage() {
           )}
         </div>
       ) : viewMode === 'list' ? (
-        <div className="data-panel data-panel--bounded">
+        <TablePanel pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}>
           <table className="table">
             <thead>
               <tr>
@@ -422,7 +431,7 @@ export default function InventarioPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => {
+              {paginated.map(p => {
                 const isLow = p.stock_actual > 0 && p.stock_actual <= p.stock_minimo;
                 const isOut = p.stock_actual === 0;
                 return (
@@ -485,7 +494,7 @@ export default function InventarioPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </TablePanel>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
           {filtered.map(p => {
@@ -549,6 +558,7 @@ export default function InventarioPage() {
       <BarcodeScannerModal open={showScanner} onClose={() => setShowScanner(false)} onScan={handleScanSearch} />
       </>
       )}
+      </div>
     </ModuleShell>
   );
 }

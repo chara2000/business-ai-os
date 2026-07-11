@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { processBusinessChat } from '@/lib/ai/chat-engine';
+import { runActionEngine } from '@/lib/ai/engine/pipeline';
 import { aiTranscribeAudio } from '@/lib/ai/provider';
 
 export async function askBusinessAI(
@@ -9,19 +9,18 @@ export async function askBusinessAI(
   options?: { maxTokens?: number; forTelegram?: boolean },
 ) {
   const admin = await createAdminClient();
-  const result = await processBusinessChat({
+  const result = await runActionEngine({
     supabase: admin,
     empresaId,
-    usuarioId,
+    usuarioId: usuarioId || '',
     message,
-    forTelegram: options?.forTelegram,
-    maxTokens: options?.maxTokens,
+    channel: options?.forTelegram ? 'telegram' : 'web',
   });
-  return result.text;
+  return result.texto;
 }
 
-export async function transcribeAudioBuffer(buffer: ArrayBuffer, filename = 'audio.ogg') {
-  return aiTranscribeAudio(buffer, filename);
+export async function transcribeAudioBuffer(buffer: ArrayBuffer, filename = 'audio.ogg', contextPrompt?: string) {
+  return aiTranscribeAudio(buffer, filename, contextPrompt);
 }
 
 export async function downloadTelegramFile(fileId: string): Promise<ArrayBuffer> {

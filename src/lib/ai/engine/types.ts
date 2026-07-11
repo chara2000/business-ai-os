@@ -57,6 +57,8 @@ export type ConfirmationCard = {
   acciones_disponibles: string[];
   session_id: string;
   listo_para_confirmar: boolean;
+  /** Claves snake_case de campos pendientes (Telegram) */
+  pendientes_keys?: string[];
 };
 
 export type EngineResponse = {
@@ -74,6 +76,7 @@ export const ACTION_LABELS: Record<string, string> = {
   crear_cliente: 'Registrar cliente',
   crear_proveedor: 'Registrar proveedor',
   registrar_abono: 'Registrar abono',
+  registrar_abono_proveedor: 'Registrar pago a proveedor',
   crear_compra: 'Registrar compra',
   registrar_gasto: 'Registrar gasto',
   registrar_ingreso: 'Registrar ingreso',
@@ -82,6 +85,8 @@ export const ACTION_LABELS: Record<string, string> = {
   consultar_stock_bajo: 'Consultar stock bajo',
   consultar_deudores: 'Consultar deudores',
   consultar_clientes: 'Consultar clientes',
+  consultar_stock: 'Consultar stock',
+  consultar_resumen: 'Resumen ejecutivo',
 };
 
 export const FIELD_LABELS: Record<string, string> = {
@@ -110,6 +115,10 @@ export const FIELD_LABELS: Record<string, string> = {
   producto: 'Producto',
   monto: 'Monto',
   metodo_pago: 'Método de pago',
+  notas: 'Notas',
+  es_credito: 'Crédito',
+  motivo: 'Motivo',
+  estado: 'Estado',
   telefono: 'Teléfono',
   email: 'Email',
 };

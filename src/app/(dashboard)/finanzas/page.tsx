@@ -17,6 +17,8 @@ import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
 import { ModuleShell } from '@/components/ui/ModuleShell';
+import { TablePanel } from '@/components/ui/TablePanel';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { InvoiceScanModal } from '@/components/ocr/InvoiceScanModal';
 import type { ParsedInvoice } from '@/lib/ocr/parse-invoice';
 import toast from 'react-hot-toast';
@@ -150,6 +152,8 @@ export default function FinanzasPage() {
   const [gastosCategorias, setGastosCategorias] = useState<{ categoria: string; monto: number; color: string }[]>([]);
   const [movimientos, setMovimientos] = useState<{ tipo: string; concepto: string; monto: number; fecha: string; metodo: string; sortKey: number }[]>([]);
   const [showGastoModal, setShowGastoModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
 
   const fetchFinanzas = useCallback(async () => {
     if (!empresaId) return;
@@ -163,13 +167,13 @@ export default function FinanzasPage() {
 
     const movs: { tipo: string; concepto: string; monto: number; fecha: string; metodo: string; sortKey: number }[] = [];
     (ventas ?? []).slice(0, 30).forEach((v, i) => {
-      movs.push({ tipo: 'ingreso', concepto: 'Venta registrada', monto: v.total, fecha: new Date(v.created_at).toLocaleDateString('es-CO'), metodo: 'venta', sortKey: new Date(v.created_at).getTime() + i });
+      movs.push({ tipo: 'ingreso', concepto: 'Venta registrada', monto: v.total, fecha: v.created_at, metodo: 'venta', sortKey: new Date(v.created_at).getTime() + i });
     });
     (gastos ?? []).forEach((g) => {
-      movs.push({ tipo: 'egreso', concepto: g.concepto, monto: g.monto, fecha: new Date(g.created_at).toLocaleDateString('es-CO'), metodo: g.metodo_pago, sortKey: new Date(g.created_at).getTime() });
+      movs.push({ tipo: 'egreso', concepto: g.concepto, monto: g.monto, fecha: g.created_at, metodo: g.metodo_pago, sortKey: new Date(g.created_at).getTime() });
     });
     (abonos ?? []).forEach((a) => {
-      movs.push({ tipo: 'ingreso', concepto: 'Abono a crédito', monto: a.monto, fecha: new Date(a.created_at).toLocaleDateString('es-CO'), metodo: a.metodo_pago, sortKey: new Date(a.created_at).getTime() });
+      movs.push({ tipo: 'ingreso', concepto: 'Abono a crédito', monto: a.monto, fecha: a.created_at, metodo: a.metodo_pago, sortKey: new Date(a.created_at).getTime() });
     });
     movs.sort((a, b) => b.sortKey - a.sortKey);
     setMovimientos(movs.slice(0, 15));
@@ -199,6 +203,10 @@ export default function FinanzasPage() {
     { label: 'Ganancia', value: fmt((ultimoMes?.ingresos ?? 0) - (ultimoMes?.gastos ?? 0)), icon: Wallet, tone: 'brand' as const },
     { label: 'Margen', value: `${margenPromedio}%`, icon: PieChart, tone: 'warning' as const },
   ];
+
+  const totalPages = Math.max(1, Math.ceil(movimientos.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedMovimientos = movimientos.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <ModuleShell
@@ -297,7 +305,10 @@ export default function FinanzasPage() {
             <p className="panel-subtitle">Últimos movimientos registrados</p>
           </div>
 
-          <div className="data-panel data-panel--bounded data-panel--ledger">
+          <TablePanel
+            className="data-panel--ledger"
+            pagination={{ currentPage, totalPages, totalItems: movimientos.length, pageSize, onPageChange: setPage }}
+          >
             <table className="table">
               <thead>
                 <tr>
@@ -309,7 +320,7 @@ export default function FinanzasPage() {
                 </tr>
               </thead>
               <tbody>
-                {movimientos.map((m, i) => (
+                {paginatedMovimientos.map((m, i) => (
                   <tr key={i}>
                     <td>
                       <span className={`badge ${m.tipo === 'ingreso' ? 'badge-success' : 'badge-danger'}`}>
@@ -318,7 +329,7 @@ export default function FinanzasPage() {
                     </td>
                     <td style={{ fontSize: 13, fontWeight: 600 }}>{m.concepto}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{m.metodo}</td>
-                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.fecha}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}><ClientDate value={m.fecha} /></td>
                     <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'var(--font-mono)', fontSize: 13, color: m.tipo === 'ingreso' ? 'var(--success)' : 'var(--danger)' }}>
                       {m.tipo === 'ingreso' ? '+' : '-'}${m.monto.toLocaleString()}
                     </td>
@@ -326,7 +337,7 @@ export default function FinanzasPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablePanel>
         </div>
       </div>
 

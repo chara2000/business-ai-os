@@ -10,6 +10,8 @@ import {
 import { PwaSettingsPanel } from '@/components/pwa/PwaSettingsPanel';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
+import { ModuleShell } from '@/components/ui/ModuleShell';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { useThemeStore } from '@/stores/themeStore';
@@ -310,23 +312,24 @@ function ConfiguracionContent() {
   ];
 
   return (
-    <div className="page-fintech-wrap animate-fade-in">
-      <div className="fintech-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '24px 28px 0' }}>
-        <div className="tabs-premium" style={{ marginBottom: 28 }}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`tab-premium ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="page-fintech-wrap settings-page animate-fade-in">
+      <div className="fintech-card settings-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="settings-card__head">
+          <div className="tabs-premium settings-tabs">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`tab-premium ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ padding: '28px' }}>
+        <div className="settings-card__body">
           {activeTab === 'perfil' && (
             <form onSubmit={handleSaveProfile}>
               <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
@@ -410,7 +413,7 @@ function ConfiguracionContent() {
           )}
 
           {activeTab === 'bots' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="settings-bots-panel" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div className="card" style={{ padding: 24, background: 'var(--bg-input)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-blue-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -563,7 +566,7 @@ function ConfiguracionContent() {
                         : 'Gratis'}
                       {' · '}
                       {planInfo.activa ? 'Activo' : 'Inactivo'}
-                      {planInfo.plan_expira_en && ` · Vence ${new Date(planInfo.plan_expira_en).toLocaleDateString('es-CO')}`}
+                      {planInfo.plan_expira_en && <> · Vence <ClientDate value={planInfo.plan_expira_en} /></>}
                     </p>
                     {planInfo.billing_status !== 'manual' && (
                       <span className="badge badge-info" style={{ marginTop: 6 }}>Wompi: {planInfo.billing_status}</span>
@@ -615,7 +618,6 @@ function ConfiguracionContent() {
               </div>
             </div>
           )}
-        </div>
         </div>
       </div>
       {wompiCheckout && (

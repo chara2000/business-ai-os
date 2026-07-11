@@ -10,12 +10,16 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  AreaChart, Area
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
+import { ModuleShell } from '@/components/ui/ModuleShell';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { formatCurrency, formatCompact } from '@/lib/utils';
 import { aggregateCashflow } from '@/lib/db-helpers';
+import { TablePanel } from '@/components/ui/TablePanel';
 
 const supabase = createClient();
 
@@ -43,6 +47,8 @@ export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [activitySearch, setActivitySearch] = useState('');
   const [activityFilter, setActivityFilter] = useState<'all' | 'completada' | 'pendiente'>('all');
+  const [activityPage, setActivityPage] = useState(1);
+  const activityPageSize = 5;
   const [cashflow, setCashflow] = useState<{ mes: string; value: number }[]>([]);
   const [stats, setStats] = useState({
     ingresos: 0, gastos: 0, balance: 0, ahorro: 0,
@@ -69,7 +75,7 @@ export default function DashboardPage() {
         supabase.from('ventas').select('total').eq('empresa_id', empresaId).eq('estado', 'completada'),
         supabase.from('gastos').select('monto').eq('empresa_id', empresaId),
         supabase.from('ventas').select('id, numero, total, created_at, estado, cliente:clientes(nombre)')
-          .eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(8),
+          .eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(50),
         supabase.from('productos').select('id, nombre, codigo, stock_actual, stock_minimo').eq('empresa_id', empresaId),
         supabase.from('creditos').select('saldo_pendiente, estado').eq('empresa_id', empresaId),
         supabase.from('ventas').select('total, created_at').eq('empresa_id', empresaId).eq('estado', 'completada'),
@@ -112,6 +118,11 @@ export default function DashboardPage() {
     const matchFilter = activityFilter === 'all' || v.estado === activityFilter;
     return matchSearch && matchFilter;
   });
+  const activityTotalPages = Math.max(1, Math.ceil(filteredActivities.length / activityPageSize));
+  const activityCurrentPage = Math.min(activityPage, activityTotalPages);
+  const paginatedActivities = filteredActivities.slice((activityCurrentPage - 1) * activityPageSize, activityCurrentPage * activityPageSize);
+
+  useEffect(() => { setActivityPage(1); }, [activitySearch, activityFilter]);
 
   const marginPct = stats.ingresos > 0 ? ((stats.balance / stats.ingresos) * 100).toFixed(1) : '0';
 
@@ -276,7 +287,16 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          <div className="activities-table-wrap">
+          <TablePanel
+            padded={false}
+            pagination={{
+              currentPage: activityCurrentPage,
+              totalPages: activityTotalPages,
+              totalItems: filteredActivities.length,
+              pageSize: activityPageSize,
+              onPageChange: setActivityPage,
+            }}
+          >
             <table className="fintech-table">
               <thead>
                 <tr>
@@ -292,7 +312,7 @@ export default function DashboardPage() {
                   <tr><td colSpan={5} className="table-empty">Cargando...</td></tr>
                 ) : filteredActivities.length === 0 ? (
                   <tr><td colSpan={5} className="table-empty">Sin actividad</td></tr>
-                ) : filteredActivities.map((v) => (
+                ) : paginatedActivities.map((v) => (
                   <tr key={v.id}>
                     <td>
                       <div className="activity-cell">
@@ -301,7 +321,7 @@ export default function DashboardPage() {
                       </div>
                     </td>
                     <td className="mono-muted">{v.numero}</td>
-                    <td>{new Date(v.created_at).toLocaleDateString('es-CO')}</td>
+                    <td><ClientDate value={v.created_at} /></td>
                     <td className="cell-bold">{formatCurrency(v.total)}</td>
                     <td>
                       <span className={`status-dot ${v.estado === 'completada' ? 'completed' : 'pending'}`}>
@@ -312,7 +332,7 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablePanel>
         </div>
 
         <div className="fintech-card dash-invest-card">

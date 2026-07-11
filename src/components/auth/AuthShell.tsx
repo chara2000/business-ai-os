@@ -8,6 +8,7 @@ import { LoginFormCard } from '@/components/auth/LoginFormCard';
 import { RegisterInfoPanel } from '@/components/auth/RegisterInfoPanel';
 import { RegisterFormCard } from '@/components/auth/RegisterFormCard';
 import { cn } from '@/lib/utils';
+import { Sparkles } from 'lucide-react';
 
 const FORM_SPRING = {
   type: 'spring' as const,
@@ -22,9 +23,26 @@ interface AuthShellProps {
 
 export function AuthShell({ isRegister }: AuthShellProps) {
   return (
-    <div className={cn('login-shell', isRegister && 'login-shell--register')}>
+    <div
+      className={cn(
+        'login-shell',
+        isRegister ? 'login-shell--register' : 'login-shell--login-only',
+      )}
+    >
       <AuthThemeToggle />
       <LoginDecorations />
+
+      {isRegister && (
+        <div className="auth-mobile-hero">
+          <div className="sidebar-rail-logo">
+            <Sparkles size={18} color="#1A1A1A" />
+          </div>
+          <div>
+            <p className="auth-mobile-hero__title">Business<span>OS</span></p>
+            <p className="auth-mobile-hero__sub">Crea tu cuenta en minutos</p>
+          </div>
+        </div>
+      )}
 
       <motion.div className="login-shell-panels" layoutRoot>
         {/* Info: cambia de lado al instante, solo fade en el contenido */}

@@ -12,8 +12,10 @@ import { getUsuarioId } from '@/lib/db-helpers';
 import { useEmpresa } from '@/lib/hooks/useEmpresa';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormModal } from '@/components/ui/FormModal';
+import { ClientDate } from '@/components/ui/ClientDate';
 import { ModuleShell } from '@/components/ui/ModuleShell';
 import { SearchField } from '@/components/ui/SearchField';
+import { TablePanel } from '@/components/ui/TablePanel';
 import type { Credito } from '@/types';
 
 const supabase = createClient();
@@ -147,6 +149,8 @@ export default function CreditosPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [abonoCredito, setAbonoCredito] = useState<Credito | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const fetchCreditos = useCallback(async () => {
     if (!empresaId) return;
@@ -169,6 +173,11 @@ export default function CreditosPage() {
     const matchStatus = filterStatus === 'all' || c.estado === filterStatus;
     return matchSearch && matchStatus;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, filterStatus]);
 
   const totalCartera = creditos.filter(c => c.estado !== 'pagado').reduce((s, c) => s + c.saldo_pendiente, 0);
   const vencidos = creditos.filter(c => c.estado === 'vencido').length;
@@ -212,8 +221,12 @@ export default function CreditosPage() {
           </div>
         </div>
       ) : (
-        <div className="data-panel data-panel--bounded" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(c => {
+        <TablePanel
+          className="table-panel--list"
+          pagination={{ currentPage, totalPages, totalItems: filtered.length, pageSize, onPageChange: setPage }}
+        >
+          <div className="credit-list">
+          {paginated.map(c => {
             const st = STATUS_STYLES[c.estado];
             const pct = c.monto_total > 0 ? (c.monto_pagado / c.monto_total) * 100 : 0;
             const vencimiento = new Date(c.fecha_vencimiento);
@@ -238,7 +251,7 @@ export default function CreditosPage() {
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
                     <span>Total: <strong style={{ color: 'var(--text-secondary)' }}>${c.monto_total.toLocaleString()}</strong></span>
                     <span>Pagado: <strong style={{ color: 'var(--success)' }}>${c.monto_pagado.toLocaleString()}</strong></span>
-                    <span>Vence: <strong style={{ color: isVencido ? 'var(--danger)' : 'var(--text-secondary)' }}>{vencimiento.toLocaleDateString()}</strong></span>
+                    <span>Vence: <strong style={{ color: isVencido ? 'var(--danger)' : 'var(--text-secondary)' }}><ClientDate value={vencimiento} /></strong></span>
                   </div>
                   <div className="progress-bar">
                     <div className="progress-bar-fill" style={{ width: `${pct}%`, background: isVencido ? 'var(--danger)' : 'var(--success)' }} />
@@ -263,7 +276,8 @@ export default function CreditosPage() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </TablePanel>
       )}
 
       {abonoCredito && (

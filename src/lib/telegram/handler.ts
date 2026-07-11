@@ -33,7 +33,8 @@ async function getUsuarioByChatId(chatId: number) {
     .from('usuarios')
     .select('id, empresa_id, nombre, empresas(nombre)')
     .eq('telegram_chat_id', chatId.toString())
-    .single();
+    .limit(1)
+    .maybeSingle();
   return data;
 }
 

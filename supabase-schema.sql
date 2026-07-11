@@ -257,6 +257,22 @@ create table gastos (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- 14B. TABLA CUENTAS POR PAGAR A PROVEEDORES
+create table cuentas_por_pagar_proveedor (
+  id uuid primary key default uuid_generate_v4(),
+  empresa_id uuid not null references empresas(id) on delete cascade,
+  proveedor_id uuid not null references proveedores(id) on delete cascade,
+  orden_compra_id uuid references ordenes_compra(id) on delete set null,
+  monto_total numeric(12,2) not null default 0.00,
+  monto_pagado numeric(12,2) not null default 0.00,
+  saldo_pendiente numeric(12,2) not null default 0.00,
+  estado credit_status not null default 'pendiente',
+  fecha_vencimiento timestamp with time zone not null,
+  notas text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- 15. TABLA DEVOLUCIONES
 create table devoluciones (
   id uuid primary key default uuid_generate_v4(),
@@ -302,6 +318,7 @@ alter table items_venta enable row level security;
 alter table creditos enable row level security;
 alter table abonos enable row level security;
 alter table gastos enable row level security;
+alter table cuentas_por_pagar_proveedor enable row level security;
 alter table devoluciones enable row level security;
 alter table auditoria_logs enable row level security;
 
@@ -343,6 +360,9 @@ create policy abonos_tenant_isolation on abonos
   for all using (empresa_id = (select empresa_id from usuarios where auth_user_id = auth.uid()));
 
 create policy gastos_tenant_isolation on gastos
+  for all using (empresa_id = (select empresa_id from usuarios where auth_user_id = auth.uid()));
+
+create policy cuentas_por_pagar_proveedor_tenant_isolation on cuentas_por_pagar_proveedor
   for all using (empresa_id = (select empresa_id from usuarios where auth_user_id = auth.uid()));
 
 create policy devoluciones_tenant_isolation on devoluciones

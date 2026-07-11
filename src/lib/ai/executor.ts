@@ -17,21 +17,34 @@ function generateCodigo() {
 function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T | null {
   const qTokens = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
   if (!qTokens.length) {
-    // Fallback simple si son palabras muy cortas
     const exact = items.find(i => String((i as any)[nameKey]).toLowerCase().includes(query.toLowerCase()));
     return exact || null;
   }
 
   let bestMatch: T | null = null;
   let maxScore = 0;
-
+  
   for (const item of items) {
     const targetName = String((item as any)[nameKey]).toLowerCase();
     let score = 0;
+    let tokensMatched = 0;
+    
     for (const t of qTokens) {
-      if (targetName.includes(t)) score += t.length;
+      if (targetName.includes(t)) {
+        score += t.length;
+        tokensMatched++;
+      }
     }
-    if (targetName.includes(query.toLowerCase())) score += 100;
+    
+    // Penalize if we only matched 1 word but the query has multiple distinct important words
+    if (qTokens.length > 1 && tokensMatched === 1) {
+       score = score / 2; // Reduce score significantly if it's a very partial match
+    }
+
+    if (targetName.includes(query.toLowerCase())) {
+       score += 100;
+       tokensMatched = qTokens.length;
+    }
     
     if (score > maxScore) {
       maxScore = score;
@@ -39,7 +52,9 @@ function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T
     }
   }
 
-  return maxScore > 2 ? bestMatch : null;
+  // Threshold must be higher than just 2. If it's a multi-word query, require a decent score.
+  // We require at least a score of 5 (e.g. one 5-letter word) or exactly matching the whole phrase.
+  return maxScore >= 5 ? bestMatch : null;
 }
 
 async function findProductoByName(supabase: SupabaseClient, empresaId: string, nombre: string) {

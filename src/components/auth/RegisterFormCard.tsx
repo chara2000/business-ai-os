@@ -85,7 +85,9 @@ export function RegisterFormCard() {
       if (signInError) throw signInError;
 
       toast.success('¡Registro exitoso! Preparando tu entorno...');
-      setTimeout(() => router.push('/dashboard'), 1500);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al registrarse';
       toast.error(msg);
