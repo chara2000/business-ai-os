@@ -9,6 +9,11 @@ export class ConfirmationManager {
     args: any,
     sessionId: string
   ): Promise<{ card: ConfirmationCard; pendingKeys: string[] }> {
+    if ((toolName === 'crear_producto' || toolName === 'crear_compra') && !args.codigo) {
+      const randomId = Math.floor(1000 + Math.random() * 9000);
+      args.codigo = `PRD-${randomId}`;
+    }
+
     const { entidad, camposRequeridos } = this.getSchemaRules(toolName);
     const pendingKeys: string[] = [];
     const campos: EnrichedField[] = [];
