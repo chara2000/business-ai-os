@@ -391,7 +391,30 @@ export async function executeAIAction(
           ? await supabase.from('productos').select('*').eq('id', datos.producto_id).eq('empresa_id', empresaId).single().then((r) => r.data)
           : await findProductoByName(supabase, empresaId, nombre);
 
-        if (!producto) return { success: false, message: `No encontré el producto "${nombre}".` };
+        if (!producto) {
+          const { data: allProds } = await supabase
+            .from('productos')
+            .select('nombre, stock_actual')
+            .eq('empresa_id', empresaId)
+            .eq('activo', true)
+            .limit(200);
+
+          const tokens = nombre.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+          const similares = (allProds || []).filter(p => {
+            const pn = p.nombre.toLowerCase();
+            return tokens.some(t => pn.includes(t));
+          }).slice(0, 3);
+
+          if (similares.length > 0) {
+            const lista = similares.map(p => `• "${p.nombre}"`).join('\n');
+            return {
+              success: false,
+              message: `No encontré el producto "${nombre}" en el inventario. ¿Quisiste decir alguno de estos?\n${lista}\nDíctame el nombre exacto del producto.`
+            };
+          }
+
+          return { success: false, message: `No encontré el producto "${nombre}" en el inventario.` };
+        }
 
         const updates: Record<string, unknown> = {};
         if (datos.precio_venta != null) updates.precio_venta = Number(datos.precio_venta);
