@@ -15,12 +15,20 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                secure: process.env.NODE_ENV === 'production',
+              })
             );
           } catch {
             // The `setAll` method was called from a Server Component.
           }
         },
+      },
+      cookieOptions: {
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
       },
     }
   );
@@ -38,10 +46,18 @@ export async function createAdminClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                secure: process.env.NODE_ENV === 'production',
+              })
             );
           } catch { /* Server Component */ }
         },
+      },
+      cookieOptions: {
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
       },
       global: {
         fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
@@ -49,3 +65,4 @@ export async function createAdminClient() {
     }
   );
 }
+
