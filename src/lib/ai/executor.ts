@@ -216,18 +216,25 @@ export async function executeAIAction(
       case 'consultar_stock':
       case 'search_products': {
         const nombre = String(datos.query ?? datos.producto ?? datos.nombre ?? '').trim();
-        if (!nombre) return { success: false, message: 'Indica qué producto quieres consultar.' };
         
-        // Use ilike to find products matching the query
-        const { data: productos, error } = await supabase
+        let queryBuilder = supabase
           .from('productos')
           .select('id, nombre, stock_actual, stock_minimo, precio_venta')
           .eq('empresa_id', empresaId)
-          .ilike('nombre', `%${nombre}%`)
-          .limit(5);
+          .eq('activo', true)
+          .order('stock_actual', { ascending: false });
+
+        if (nombre) {
+          queryBuilder = queryBuilder.ilike('nombre', `%${nombre}%`).limit(10);
+        } else {
+          queryBuilder = queryBuilder.limit(50);
+        }
+
+        const { data: productos, error } = await queryBuilder;
           
         if (error || !productos || productos.length === 0) {
-          return { success: false, message: `No encontré "${nombre}" en inventario.` };
+          if (nombre) return { success: false, message: `No encontré "${nombre}" en inventario.` };
+          return { success: true, message: 'Tu inventario está vacío.' };
         }
         
         const lines = productos.map(p => {
@@ -237,7 +244,9 @@ export async function executeAIAction(
         
         return {
           success: true,
-          message: `Resultados de búsqueda:\n${lines.join('\n')}`,
+          message: nombre 
+            ? `Resultados de búsqueda para "${nombre}":\n${lines.join('\n')}` 
+            : `Aquí tienes los productos de tu inventario:\n${lines.join('\n')}`,
           data: productos,
         };
       }
@@ -587,7 +596,7 @@ export async function executeAIAction(
         const itemsToProcess: VentaItemRaw[] = isSingleProduct
           ? [{ productoNombre, cantidad, precio: Number(datos.precio ?? 0) }]
           : productosRaw!.map((p) => ({
-              productoNombre: String(p.producto ?? '').trim(),
+              productoNombre: String(p.nombre ?? p.producto ?? '').trim(),
               cantidad: Number(p.cantidad ?? 1),
               precio: Number(p.precio ?? 0),
             }));

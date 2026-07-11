@@ -83,7 +83,7 @@ function formatProductoPendiente(card: ConfirmationCard): string {
 
 function formatProductoListo(card: ConfirmationCard): string {
   const nombre = capitalizeName(fieldValue(card.campos, 'nombre', 'producto') ?? 'Producto');
-  const codigo = fieldValue(card.campos, 'codigo') ?? 'PRD-??????';
+  const codigo = fieldValue(card.campos, 'codigo') ?? `PRD-${Math.floor(1000 + Math.random() * 9000)}`;
   const categoria = fieldValue(card.campos, 'categoria');
   const cantidad = formatCantidad(card.campos);
   const compraVal = fieldNum(card.campos, 'precio_costo', 'precio_compra');

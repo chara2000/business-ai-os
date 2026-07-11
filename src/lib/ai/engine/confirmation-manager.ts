@@ -27,11 +27,18 @@ export class ConfirmationManager {
           required: true
         });
       } else {
+        let displayValueStr = String(value);
+        if (Array.isArray(value)) {
+          displayValueStr = value.map(v => typeof v === 'object' && v !== null ? (v.nombre || v.producto || JSON.stringify(v)) + (v.cantidad ? ` (x${v.cantidad})` : '') : String(v)).join(', ');
+        } else if (typeof value === 'object' && value !== null) {
+          displayValueStr = JSON.stringify(value);
+        }
+
         campos.push({
           key,
           label: this.formatLabel(key),
           value,
-          displayValue: String(value),
+          displayValue: displayValueStr,
           source: 'usuario',
           required: true
         });
@@ -41,11 +48,18 @@ export class ConfirmationManager {
     // Agregar campos opcionales provistos por el usuario
     for (const [key, value] of Object.entries(args)) {
       if (!camposRequeridos.includes(key)) {
+        let displayValueStr = String(value);
+        if (Array.isArray(value)) {
+          displayValueStr = value.map(v => typeof v === 'object' && v !== null ? (v.nombre || v.producto || JSON.stringify(v)) + (v.cantidad ? ` (x${v.cantidad})` : '') : String(v)).join(', ');
+        } else if (typeof value === 'object' && value !== null) {
+          displayValueStr = JSON.stringify(value);
+        }
+
         campos.push({
           key,
           label: this.formatLabel(key),
           value,
-          displayValue: String(value),
+          displayValue: displayValueStr,
           source: 'usuario',
           required: false
         });
