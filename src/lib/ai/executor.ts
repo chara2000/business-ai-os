@@ -47,9 +47,12 @@ function fuzzyMatch<T>(query: string, items: T[], nameKey: string = 'nombre'): T
       }
     }
     
-    // Penalización si solo hizo match de 1 palabra pero la búsqueda tiene varias
-    if (qTokens.length > 1 && tokensMatched === 1) {
-       score = score / 2;
+    // Penalización si la mitad o más de las palabras buscadas no coinciden
+    const matchRatio = tokensMatched / Math.max(qTokens.length, 1);
+    if (matchRatio < 0.5) {
+      score = 0;
+    } else if (qTokens.length > 1 && tokensMatched === 1) {
+      score = score / 2;
     }
 
     if (score > maxScore) {
