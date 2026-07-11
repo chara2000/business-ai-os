@@ -9,16 +9,16 @@ const supabase = createClient(
 );
 
 async function main() {
-  const { data: order, error } = await supabase
-    .from('ordenes_compra')
-    .select('*, items_orden_compra(*, producto:productos(*))')
-    .eq('numero', 'OC-562792688')
-    .single();
+  const { data: sales, error } = await supabase
+    .from('ventas')
+    .select('*, items_venta(*, producto:productos(*))')
+    .gte('created_at', '2026-07-11T00:00:00.000Z')
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error(error);
   } else {
-    console.log("Order items:", JSON.stringify(order, null, 2));
+    console.log("Sales created today:", JSON.stringify(sales, null, 2));
   }
 }
 
