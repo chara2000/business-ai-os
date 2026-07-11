@@ -91,12 +91,12 @@ export class ConfirmationManager {
   private getSchemaRules(toolName: string): { entidad: ActionEntity; camposRequeridos: string[] } {
     switch (toolName) {
       case 'crear_producto':
-        // El usuario especificamente pidio exigir categoria para mantener la DB limpia
-        return { entidad: 'producto', camposRequeridos: ['nombre', 'precio_venta', 'precio_costo', 'cantidad', 'categoria'] };
+        // El usuario pidió inferirla y no exigir que la dicten
+        return { entidad: 'producto', camposRequeridos: ['nombre', 'precio_venta', 'precio_costo', 'cantidad'] };
       case 'crear_venta':
         return { entidad: 'venta', camposRequeridos: ['productos'] };
       case 'crear_compra':
-        return { entidad: 'compra', camposRequeridos: ['proveedor', 'productos', 'metodo_pago'] };
+        return { entidad: 'compra', camposRequeridos: ['proveedor', 'productos'] };
       case 'registrar_gasto':
         return { entidad: 'gasto', camposRequeridos: ['monto', 'motivo'] };
       case 'crear_cliente':

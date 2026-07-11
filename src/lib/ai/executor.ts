@@ -73,6 +73,34 @@ async function findProveedorByName(supabase: SupabaseClient, empresaId: string, 
   return fuzzyMatch(nombre, all || [], 'nombre');
 }
 
+async function findOrCreateCategoria(supabase: SupabaseClient, empresaId: string, nombre: string) {
+  if (!nombre) return null;
+  const { data: all } = await supabase.from('categorias').select('id, nombre').eq('empresa_id', empresaId);
+  const match = fuzzyMatch(nombre, all || [], 'nombre');
+  if (match) return match.id;
+
+  const { data: nueva } = await supabase
+    .from('categorias')
+    .insert([{ empresa_id: empresaId, nombre }])
+    .select('id')
+    .single();
+  return nueva?.id || null;
+}
+
+async function findOrCreateMarca(supabase: SupabaseClient, empresaId: string, nombre: string) {
+  if (!nombre) return null;
+  const { data: all } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresaId);
+  const match = fuzzyMatch(nombre, all || [], 'nombre');
+  if (match) return match.id;
+
+  const { data: nueva } = await supabase
+    .from('marcas')
+    .insert([{ empresa_id: empresaId, nombre }])
+    .select('id')
+    .single();
+  return nueva?.id || null;
+}
+
 async function findProveedorPayable(supabase: SupabaseClient, empresaId: string, proveedorId: string) {
   const { data } = await supabase
     .from('cuentas_por_pagar_proveedor')
@@ -290,6 +318,9 @@ export async function executeAIAction(
         const precioCosto = Number(datos.precio_costo ?? 0);
         const codigo = String(datos.codigo ?? generateCodigo());
         const margen = precioVenta > 0 ? ((precioVenta - precioCosto) / precioVenta) * 100 : 0;
+        
+        const categoriaId = await findOrCreateCategoria(supabase, empresaId, String(datos.categoria ?? '').trim());
+        const marcaId = await findOrCreateMarca(supabase, empresaId, String(datos.marca ?? '').trim());
 
         const { data: producto, error } = await supabase
           .from('productos')
@@ -303,6 +334,8 @@ export async function executeAIAction(
             stock_minimo: Number(datos.stock_minimo ?? 5),
             margen,
             unidad: String(datos.unidad ?? 'unidad'),
+            categoria_id: categoriaId,
+            marca_id: marcaId,
             activo: true,
           }])
           .select('id, nombre, codigo, stock_actual')
@@ -717,7 +750,8 @@ export async function executeAIAction(
         const cantidad = Number(primerProducto?.cantidad ?? datos.cantidad ?? 0);
         const precioUnit = Number(primerProducto?.costo_unitario ?? primerProducto?.precio_costo ?? datos.precio_costo ?? 0);
         const precioVenta = primerProducto?.precio_venta ? Number(primerProducto.precio_venta) : Math.round(precioUnit * 1.3);
-        const categoriaNuevo = String(primerProducto?.categoria ?? '').trim();
+        const categoriaNuevo = String(primerProducto?.categoria ?? datos.categoria ?? '').trim();
+        const marcaNuevo = String(primerProducto?.marca ?? datos.marca ?? '').trim();
 
         const metodoPago = String(datos.metodo_pago ?? (datos.es_credito ? 'credito' : 'efectivo'));
         const esCredito = Boolean(datos.es_credito) || metodoPago === 'credito';
@@ -741,6 +775,9 @@ export async function executeAIAction(
         let producto = await findProductoByName(supabase, empresaId, nombre);
         if (!producto) {
           const codigo = previewProductCodigo();
+          const categoriaId = await findOrCreateCategoria(supabase, empresaId, categoriaNuevo);
+          const marcaId = await findOrCreateMarca(supabase, empresaId, marcaNuevo);
+
           const { data: nuevoProd, error: prodErr } = await supabase
             .from('productos')
             .insert([{
@@ -753,6 +790,8 @@ export async function executeAIAction(
               stock_minimo: 5,
               margen: 23,
               unidad: 'unidad',
+              categoria_id: categoriaId,
+              marca_id: marcaId,
               activo: true,
             }])
             .select('id, nombre, codigo, stock_actual, stock_minimo, precio_venta, precio_costo')

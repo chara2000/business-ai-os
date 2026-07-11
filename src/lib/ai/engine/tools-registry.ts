@@ -48,7 +48,8 @@ export const AI_TOOLS: AITool[] = [
                 cantidad: { type: 'number', description: 'Cantidad comprada' },
                 costo_unitario: { type: 'number', description: 'Costo unitario de compra' },
                 precio_venta: { type: 'number', description: 'Nuevo precio de venta al público (opcional)' },
-                categoria: { type: 'string', description: 'Categoría del producto (opcional, útil si el producto es nuevo)' }
+                categoria: { type: 'string', description: 'Categoría del producto (infiere si el usuario la menciona)' },
+                marca: { type: 'string', description: 'Marca del producto (infiere si el usuario la menciona)' }
               },
               required: ['nombre', 'cantidad', 'costo_unitario']
             }
@@ -71,7 +72,9 @@ export const AI_TOOLS: AITool[] = [
           nombre: { type: 'string', description: 'Nombre del producto' },
           precio_venta: { type: 'number', description: 'Precio de venta al público' },
           precio_costo: { type: 'number', description: 'Precio de costo del producto' },
-          cantidad: { type: 'number', description: 'Stock inicial' }
+          cantidad: { type: 'number', description: 'Stock inicial' },
+          categoria: { type: 'string', description: 'Categoría del producto' },
+          marca: { type: 'string', description: 'Marca del producto' }
         },
         required: ['nombre', 'precio_venta']
       }
